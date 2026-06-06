@@ -19,12 +19,18 @@ class TestNormalizer:
         n = Normalizer()
         articles = [
             Article(
-                id="a1", source="github", source_id="r1",
-                url="https://example.com/1", text="content one",
+                id="a1",
+                source="github",
+                source_id="r1",
+                url="https://example.com/1",
+                text="content one",
             ),
             Article(
-                id="a2", source="github", source_id="r2",
-                url="https://example.com/1", text="content two",
+                id="a2",
+                source="github",
+                source_id="r2",
+                url="https://example.com/1",
+                text="content two",
             ),
         ]
         result = n.deduplicate(articles)

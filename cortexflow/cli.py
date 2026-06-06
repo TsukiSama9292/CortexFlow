@@ -104,7 +104,7 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
         threshold=5.0,
         demo=use_demo,
     )
-    return cast(argparse.Namespace, ns)
+    return cast("argparse.Namespace", ns)
 
 
 def _check_environment(console: Console) -> bool:
@@ -166,7 +166,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         _check_environment(console)
 
-    sources = cast(list[Literal["reddit", "github"]], args.sources or ["reddit", "github"])
+    sources = cast("list[Literal['reddit', 'github']]", args.sources or ["reddit", "github"])
 
     pipeline_input = PipelineInput(
         topic=args.topic,

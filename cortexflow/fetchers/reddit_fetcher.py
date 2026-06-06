@@ -123,9 +123,7 @@ class RedditFetcher(BaseFetcher):
                     author=raw.get("author", ""),
                     url=f"https://www.reddit.com{raw.get('permalink', '')}",
                     score=raw.get("score", 0),
-                    created_at=datetime.fromtimestamp(created, tz=UTC)
-                    if created
-                    else None,
+                    created_at=datetime.fromtimestamp(created, tz=UTC) if created else None,
                 ),
             )
 

@@ -134,7 +134,10 @@ class Pipeline:
     # ────────────────────────────
 
     async def _run_stage(
-        self, name: str, fn: Callable[[], Coroutine[Any, Any, None]], console: Console,
+        self,
+        name: str,
+        fn: Callable[[], Coroutine[Any, Any, None]],
+        console: Console,
     ) -> None:
         """執行單一 Stage，含計時、spinner 與錯誤捕捉。."""
         label = _STAGE_LABELS.get(name, name)
@@ -246,7 +249,8 @@ class Pipeline:
 
         analyzer = ArticleAnalyzer(topic=self.inp.topic)
         self.analyses = await analyzer.analyze(
-            self.articles, threshold=self.inp.relevance_threshold,
+            self.articles,
+            threshold=self.inp.relevance_threshold,
         )
 
         passed_ids = {a.article_id for a in self.analyses}

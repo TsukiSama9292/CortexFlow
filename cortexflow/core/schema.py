@@ -26,12 +26,14 @@ class Article(BaseModel):
 
     # ── 後設 ──
     fetched_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), description="系統採集時間",
+        default_factory=lambda: datetime.now(UTC),
+        description="系統採集時間",
     )
 
     # ── 擴充（Stage 3 填入） ──
     extracted_html: str | None = Field(
-        default=None, description="提取的 Markdown 全文（Stage 3 填入）",
+        default=None,
+        description="提取的 Markdown 全文（Stage 3 填入）",
     )
 
     # ── LLM 過濾結果（Stage 4 填入） ──

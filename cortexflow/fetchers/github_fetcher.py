@@ -56,7 +56,8 @@ class GitHubFetcher(BaseFetcher):
 
         try:
             async with httpx.AsyncClient(
-                timeout=settings.request_timeout, follow_redirects=True,
+                timeout=settings.request_timeout,
+                follow_redirects=True,
             ) as client:
                 resp = await client.get(trending_url, headers=headers)
                 resp.raise_for_status()
@@ -149,6 +150,7 @@ class GitHubFetcher(BaseFetcher):
                 match = re.search(r"(\d[\d,]*)", today_stars_span.get_text())
                 if match:
                     import contextlib
+
                     with contextlib.suppress(ValueError):
                         int(match.group(1).replace(",", ""))
 

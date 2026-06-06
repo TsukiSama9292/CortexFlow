@@ -91,7 +91,8 @@ class FastExtractor:
         }
         try:
             async with httpx.AsyncClient(
-                timeout=settings.request_timeout, follow_redirects=True,
+                timeout=settings.request_timeout,
+                follow_redirects=True,
             ) as client:
                 resp = await client.get(url, headers=headers)
                 resp.raise_for_status()

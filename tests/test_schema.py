@@ -50,7 +50,10 @@ class TestArticle:
     def test_relevance_score_range(self):
         with pytest.raises(ValidationError):
             Article(
-                id="x1", source="github", source_id="1", relevance_score=15.0,
+                id="x1",
+                source="github",
+                source_id="1",
+                relevance_score=15.0,
             )
 
     def test_score_default_zero(self, sample_article):

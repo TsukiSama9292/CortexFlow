@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 @pytest.mark.asyncio
 async def test_fast_extractor_trafilatura_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """測試 FastExtractor 使用 trafilatura 提取成功。"""
+
     async def mock_trafilatura(self, url: str) -> str | None:
         return "Extracted Content"
 
@@ -28,9 +29,11 @@ async def test_fast_extractor_trafilatura_success(monkeypatch: pytest.MonkeyPatc
 
 @pytest.mark.asyncio
 async def test_fast_extractor_bs4_fallback(
-    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """測試 FastExtractor 在 trafilatura 失敗時回退到 BeautifulSoup。"""
+
     async def mock_trafilatura_fail(self, url: str) -> str | None:
         return None
 

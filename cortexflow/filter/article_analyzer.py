@@ -85,7 +85,8 @@ class ArticleAnalyzer:
         )
 
         self._chain: Any = self._prompt | self.llm.with_structured_output(  # type: ignore[reportUnknownMemberType]
-            _RawAnalysis, include_raw=True
+            _RawAnalysis,
+            include_raw=True,
         )
 
         # ── 用量追蹤 ──
@@ -94,7 +95,9 @@ class ArticleAnalyzer:
         self.calls: int = 0
 
     async def analyze(
-        self, articles: list[Article], threshold: float = 5.0,
+        self,
+        articles: list[Article],
+        threshold: float = 5.0,
     ) -> list[ArticleAnalysis]:
         """對所有文章進行併發 LLM 分析。.
 

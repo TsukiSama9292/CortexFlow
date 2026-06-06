@@ -76,7 +76,8 @@ class Synthesizer:
         )
 
         self._chain: Any = self._prompt | self.llm.with_structured_output(  # pyright: ignore[reportUnknownMemberType]
-            ReportContent, include_raw=True,
+            ReportContent,
+            include_raw=True,
         )
 
         self.total_tokens: int = 0

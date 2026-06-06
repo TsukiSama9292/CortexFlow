@@ -69,7 +69,10 @@ class TestStageResult:
 
     def test_stage_result_with_error(self):
         sr = StageResult(
-            stage_name="test", success=False, duration=2.0, error="fail",
+            stage_name="test",
+            success=False,
+            duration=2.0,
+            error="fail",
         )
         assert sr.error == "fail"
 
