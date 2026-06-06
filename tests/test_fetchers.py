@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from pytest_httpx import HTTPXMock
 
 from cortexflow.fetchers.github_fetcher import GitHubFetcher
 from cortexflow.fetchers.reddit_fetcher import RedditFetcher
+
+if TYPE_CHECKING:
+    from pytest_httpx import HTTPXMock
 
 
 @pytest.mark.asyncio
@@ -22,12 +26,13 @@ async def test_reddit_fetcher_api_success(httpx_mock: HTTPXMock) -> None:
                         "permalink": "/r/test/comments/abc/",
                         "score": 100,
                         "created_utc": 1600000000.0,
-                    }
-                }
-            ]
-        }
+                    },
+                },
+            ],
+        },
     }
-    httpx_mock.add_response(url="https://www.reddit.com/search.json?q=test&limit=20&sort=relevance&type=link", json=mock_response)
+    search_url = "https://www.reddit.com/search.json?q=test&limit=20&sort=relevance&type=link"
+    httpx_mock.add_response(url=search_url, json=mock_response)
 
     fetcher = RedditFetcher()
     articles = await fetcher.fetch("test", max_results=20)
@@ -84,7 +89,8 @@ async def test_github_fetcher_success(httpx_mock: HTTPXMock) -> None:
 @pytest.mark.asyncio
 async def test_github_fetcher_language_filter(httpx_mock: HTTPXMock) -> None:
     """測試 GitHubFetcher 語言過濾。"""
-    httpx_mock.add_response(url="https://github.com/trending/python?since=weekly", html="<html></html>")
+    trending_url = "https://github.com/trending/python?since=weekly"
+    httpx_mock.add_response(url=trending_url, html="<html></html>")
 
     fetcher = GitHubFetcher()
     await fetcher.fetch("python", max_results=10)

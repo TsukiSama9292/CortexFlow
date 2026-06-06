@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from pathlib import Path
+
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import PipelineInput
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.mark.asyncio
@@ -14,7 +19,7 @@ async def test_pipeline_integration_demo(tmp_path: Path) -> None:
         topic="AI Agents",
         sources=["reddit", "github"],
         max_results_per_source=2,
-        output_path=str(output_path)
+        output_path=str(output_path),
     )
 
     pipeline = Pipeline(inp, demo=True)
@@ -41,7 +46,7 @@ async def test_pipeline_integration_json(tmp_path: Path) -> None:
         sources=["github"],
         max_results_per_source=1,
         output_format="json",
-        output_path=str(output_path)
+        output_path=str(output_path),
     )
 
     pipeline = Pipeline(inp, demo=True)

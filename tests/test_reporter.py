@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+from cortexflow.core.pipeline import StageResult
+from cortexflow.core.schema import Article, PipelineInput, ReportContent, ReportSection
 from cortexflow.reporter.json_reporter import JSONReporter
 from cortexflow.reporter.markdown_reporter import MarkdownReporter
-from cortexflow.core.schema import PipelineInput, Article, ReportContent, ReportSection
-from cortexflow.core.pipeline import StageResult
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_json_reporter_generate(tmp_path: Path) -> None:
@@ -46,7 +50,7 @@ def test_markdown_reporter_rich(tmp_path: Path) -> None:
         title="Deep Insight",
         sections=[ReportSection(emoji="🚀", title="Future", content="It's bright.")],
         key_points=["Point 1"],
-        links=["https://example.com"]
+        links=["https://example.com"],
     )
 
     reporter = MarkdownReporter()

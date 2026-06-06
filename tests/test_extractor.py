@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-import pytest
-from pytest_httpx import HTTPXMock
+from typing import TYPE_CHECKING
 
-from cortexflow.extractor.fast_extractor import FastExtractor
+import pytest
+
 from cortexflow.core.schema import Article
+from cortexflow.extractor.fast_extractor import FastExtractor
+
+if TYPE_CHECKING:
+    from pytest_httpx import HTTPXMock
 
 
 @pytest.mark.asyncio
@@ -23,7 +27,9 @@ async def test_fast_extractor_trafilatura_success(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.asyncio
-async def test_fast_extractor_bs4_fallback(httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_fast_extractor_bs4_fallback(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """測試 FastExtractor 在 trafilatura 失敗時回退到 BeautifulSoup。"""
     async def mock_trafilatura_fail(self, url: str) -> str | None:
         return None
@@ -31,11 +37,11 @@ async def test_fast_extractor_bs4_fallback(httpx_mock: HTTPXMock, monkeypatch: p
     monkeypatch.setattr(FastExtractor, "_try_trafilatura", mock_trafilatura_fail)
 
     # Mock HTTP 響應
-    httpx_mock.add_response(
-        url="https://example.com",
-        html="<html><body><main>BS4 Content that is long enough to be valid. "
-             "Adding more text to ensure it exceeds fifty characters threshold.</main></body></html>"
+    html_content = (
+        "<html><body><main>BS4 Content that is long enough to be valid. "
+        "Adding more text to ensure it exceeds fifty characters threshold.</main></body></html>"
     )
+    httpx_mock.add_response(url="https://example.com", html=html_content)
 
     extractor = FastExtractor()
     article = Article(id="1", source="reddit", source_id="1", url="https://example.com")
