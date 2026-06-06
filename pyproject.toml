@@ -1,0 +1,32 @@
+[project]
+name = "cortexflow"
+version = "0.1.0"
+description = "情報 ETL Pipeline — 從社群雜訊到結構化情報的固定管道式概念驗證"
+authors = [
+    { name = "CortexFlow Contributors" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "langchain-openai>=0.3.0",
+    "langchain-core>=0.3.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "rich>=13.0",
+    "python-dotenv>=1.0",
+    "trafilatura>=2.0.0",
+]
+
+[project.scripts]
+cortexflow = "cortexflow.__main__:main"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
