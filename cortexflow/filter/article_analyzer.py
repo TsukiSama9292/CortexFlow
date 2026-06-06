@@ -84,9 +84,9 @@ class ArticleAnalyzer:
             ],
         )
 
-        self._chain: Any = (
-            self._prompt | self.llm.with_structured_output(_RawAnalysis, include_raw=True)
-        )  # pyright: ignore[reportUnknownMemberType]
+        self._chain: Any = self._prompt | self.llm.with_structured_output(  # type: ignore[reportUnknownMemberType]
+            _RawAnalysis, include_raw=True
+        )
 
         # ── 用量追蹤 ──
         self.total_tokens: int = 0

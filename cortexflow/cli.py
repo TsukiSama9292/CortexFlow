@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import importlib.metadata
 import sys
+from importlib import metadata
+from typing import Literal, cast
 
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
@@ -94,7 +95,7 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
 
     from types import SimpleNamespace
 
-    return SimpleNamespace(
+    ns = SimpleNamespace(
         topic=topic,
         sources=sources if sources else ["reddit", "github"],
         output_format="markdown",
@@ -103,14 +104,15 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
         threshold=5.0,
         demo=use_demo,
     )
+    return cast(argparse.Namespace, ns)
 
 
 def _check_environment(console: Console) -> bool:
     """執行前環境檢查，回傳是否為健康狀態。."""
     ok = True
-    try:
-        import cortexflow  # noqa: F401
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("cortexflow") is None:
         console.print("  [red]✘ 無法載入 cortexflow 套件[/red]")
         console.print("    [dim]💡 建議: 執行 [bold]uv sync[/bold] 安裝相依套件[/dim]")
         ok = False
@@ -141,9 +143,9 @@ def _check_environment(console: Console) -> bool:
     console.print(f"  [green]✔ Python[/green] — {py_ver}")
 
     try:
-        ver = importlib.metadata.version("cortexflow")
+        ver = metadata.version("cortexflow")
         console.print(f"  [green]✔ CortexFlow[/green] — v{ver}")
-    except importlib.metadata.PackageNotFoundError:
+    except metadata.PackageNotFoundError:
         pass
 
     return ok
@@ -164,7 +166,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         _check_environment(console)
 
-    sources = args.sources or ["reddit", "github"]
+    sources = cast(list[Literal["reddit", "github"]], args.sources or ["reddit", "github"])
 
     pipeline_input = PipelineInput(
         topic=args.topic,
