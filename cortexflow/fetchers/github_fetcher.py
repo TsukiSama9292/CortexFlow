@@ -68,9 +68,27 @@ class GitHubFetcher(BaseFetcher):
         例如 "python", "rust", "typescript" 會被辨識為語言過濾條件。
         """
         known_languages = {
-            "python", "rust", "typescript", "javascript", "go", "java",
-            "c++", "c", "c#", "ruby", "swift", "kotlin", "php", "scala",
-            "r", "dart", "elixir", "haskell", "lua", "zig", "nim",
+            "python",
+            "rust",
+            "typescript",
+            "javascript",
+            "go",
+            "java",
+            "c++",
+            "c",
+            "c#",
+            "ruby",
+            "swift",
+            "kotlin",
+            "php",
+            "scala",
+            "r",
+            "dart",
+            "elixir",
+            "haskell",
+            "lua",
+            "zig",
+            "nim",
         }
         normalized = topic.strip().lower()
         if normalized in known_languages:
@@ -120,14 +138,13 @@ class GitHubFetcher(BaseFetcher):
 
             # ── 今日新增星星 ──
             today_stars_span = row.find("span", class_="d-inline-block float-sm-right")
-            today_stars = 0
             if today_stars_span:
                 match = re.search(r"(\d[\d,]*)", today_stars_span.get_text())
                 if match:
                     try:
-                        today_stars = int(match.group(1).replace(",", ""))
+                        int(match.group(1).replace(",", ""))
                     except ValueError:
-                        today_stars = 0
+                        pass
 
             # ── 主題過濾 ──
             combined = f"{full_name} {description} {language}".lower()

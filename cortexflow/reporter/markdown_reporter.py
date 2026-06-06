@@ -76,9 +76,11 @@ class MarkdownReporter:
         lines.append("## 🔗 相關連結")
         lines.append("")
         for link in rc.links:
-            if ":" in link:
+            if "://" in link:
+                lines.append(f"- {link}")
+            elif ":" in link:
                 name, url = link.split(":", 1)
-                lines.append(f"- **{name.strip()}**:{url.strip()}")
+                lines.append(f"- **{name.strip()}**: {url.strip()}")
             else:
                 lines.append(f"- {link}")
         lines.append("")
@@ -129,7 +131,8 @@ class MarkdownReporter:
             status = "✅ 成功" if sr.success else "❌ 失敗"
             error_suffix = f" ({sr.error})" if sr.error else ""
             lines.append(
-                f"| {sr.stage_name} | {status}{error_suffix} | {sr.duration:.2f} | {sr.items_count} |"
+                f"| {sr.stage_name} | {status}{error_suffix}"
+                f" | {sr.duration:.2f} | {sr.items_count} |"
             )
         lines.append("")
 

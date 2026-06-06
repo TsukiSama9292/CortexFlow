@@ -1,8 +1,8 @@
 # CortexFlow
 
-**情報 ETL Pipeline — 從社群雜訊到結構化情報的固定管道式概念驗證**
+**情報 ETL Pipeline — 從社群雜訊到結構化情報的固定管道式系統**
 
-CortexFlow 是一個基於 Python 非同步架構開發的**固定管道式（Fixed Pipeline）情報過濾與自動化彙整概念驗證（PoC）**。與 gpt-researcher 等動態規劃型研究代理不同，CortexFlow 將情報處理流程定義為一組可預測、可除錯、可重現的固定階段（Stage），每個階段有明確的輸入/輸出合約與錯誤隔離邊界。
+CortexFlow 是一個基於 Python 非同步架構開發的**固定管道式（Fixed Pipeline）情報過濾與自動化彙整系統**。與 gpt-researcher 等動態規劃型研究代理不同，CortexFlow 將情報處理流程定義為一組可預測、可除錯、可重現的固定階段（Stage），每個階段有明確的輸入/輸出合約與錯誤隔離邊界。
 
 > **核心定位**：這不是一個會自己決定「下一步該做什麼」的研究 Agent。這是一個你定義好「去哪裡查、怎麼過濾、怎麼輸出」後，就會穩定執行的情報 ETL Pipeline。
 
@@ -325,6 +325,12 @@ uv run cortexflow \
   --output-format json \
   --output ./reports/omlx.json
 
+# Demo 模式（不需任何 API Key）
+uv run cortexflow \
+  --topic "AI Agent" \
+  --sources github \
+  --demo
+
 # 設定 LLM 過濾門檻（0-10，越高越嚴格）
 uv run cortexflow \
   --topic "Vibe Coding" \
@@ -343,6 +349,44 @@ uv run cortexflow \
 | `--output` | `output_report.md` | 輸出檔案路徑 |
 | `--max-results` | `20` | 每渠道最大結果數 |
 | `--threshold` | `5.0` | LLM 相關性門檻（0-10） |
+| `--demo` | — | Demo 模式：使用模擬資料，不需任何 API Key |
+
+### CLI 輸出範例
+
+```
+🎮 Demo 模式 — 使用模擬資料
+
+╔══════════════════════════════════╗
+║        CortexFlow Pipeline        ║
+╚══════════════════════════════════╝
+
+  🔍 Fetch  →  🧹 Normalize  →  📄 Extract  →
+                               🤖 Analyze (Map)
+                                    ↓
+                   🧠 Synthesize (Reduce)
+                         ↓
+                       📝 Report
+
+  來源: github
+  主題: AI Coding Agents
+
+  ✔ 🔍 GitHub 採集 完成  (0.00s)
+  ✔ 🧹 標準化去重 完成  (0.00s)
+  ✔ 📄 內容提取 完成  (0.00s)
+  ✔ 🤖 LLM 分析 完成  (0.00s)
+  ✔ 🧠 報告合成 完成  (0.00s)
+  ✔ 📝 報告輸出 完成  (0.00s)
+
+─────────────────── 執行摘要 ───────────────────
+  ✔ 🔍 GitHub 採集       0.00s  5 items
+  ✔ 🧹 標準化去重           0.00s  5 items
+  ✔ 📄 內容提取            0.00s  5 items
+  ✔ 🤖 LLM 分析          0.00s  5 items
+  ✔ 🧠 報告合成            0.00s  5 items
+  ✔ 📝 報告輸出            0.00s  5 items
+
+  完成 — 輸出: output_report.md  (5 篇文章)
+```
 
 ---
 
@@ -470,6 +514,8 @@ Token 用量: 11,464
 
 ## 開發路線圖 (Roadmap)
 
+詳細規劃請見 [`docs/development-plan.md`](docs/development-plan.md)。
+
 ### Phase 1 — PoC ✅（已完成）
 - ✅ 核心管道協調器實作（Fetch → Normalize → Extract → Analyze → Synthesize → Report）
 - ✅ 雙渠道 Fetcher（Reddit + GitHub Trending，全免 API Key）
@@ -479,17 +525,36 @@ Token 用量: 11,464
 - ✅ CLI 介面（argparse + uv run cortexflow）
 - ✅ 完整的錯誤隔離與最佳努力策略
 
-### Phase 2 — 穩定性與可觀測性
-- [ ] 執行記錄持久化（SQLite）
-- [ ] Token 用量統計與成本估算儀表板
-- [ ] 各 Stage 獨立重跑能力
-- [ ] 部分失敗報告機制
+### Phase 2 — Prototype ✅（已完成）
+- ✅ CLI UX 升級：Pipeline ASCII 視覺化、Rich spinner、彩色輸出
+- ✅ Demo 模式：`--demo` 參數，零 API Key 展示完整流程
+- ✅ 程式碼清理：移除死程式碼、消除 sys.path hack、清理過時註解
+- ✅ Ruff 靜態檢查設定（lint + format）
+- ✅ 結構化模組包裝（__init__.py docstring）
+- ✅ 環境啟動檢查
+- ✅ 完整開發規劃（Prototype → MVP → MMP → MLP）
 
-### Phase 3 — 生產力提升
-- [ ] 自訂 Fetcher 插件機制
-- [ ] 排程觸發（定時執行）
-- [ ] Webhook / Slack / Discord 通知輸出
-- [ ] 更多來源渠道（Hacker News、Lobsters、技術部落格 RSS）
+### Phase 3 — MVP（規劃中）
+- [ ] 單元測試與整合測試（pytest, >70% 覆蓋）
+- [ ] GitHub Actions CI/CD
+- [ ] 結構化日誌（loguru）
+- [ ] 執行記錄持久化（SQLite）
+- [ ] Hacker News / Lobsters 資料來源
+- [ ] 插件化 Fetcher 機制
+- [ ] 型態檢查（pyright strict mode）
+
+### Phase 4 — MMP（規劃中）
+- [ ] LLM Response 快取（成本優化）
+- [ ] PDF / HTML 報告輸出
+- [ ] Docker 部署
+- [ ] Slack / Discord / Email 通知
+- [ ] 排程執行（cron 語法）
+
+### Phase 5 — MLP（規劃中）
+- [ ] Web Dashboard
+- [ ] Fetcher 市集與社群生態系
+- [ ] 趨勢偵測與異常預警
+- [ ] 一鍵分享報告
 
 ---
 

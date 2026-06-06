@@ -15,14 +15,19 @@ from datetime import datetime, timedelta
 import httpx
 
 from cortexflow.config.settings import settings
-from cortexflow.core.errors import FetchError
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 
 # ── Demo 模式用的模擬資料 ──
 _DEMO_SUBREDDITS = [
-    "r/programming", "r/MachineLearning", "r/artificial",
-    r"r/webdev", "r/rust", "r/Python", "r/devops", r"r/startups",
+    "r/programming",
+    "r/MachineLearning",
+    "r/artificial",
+    r"r/webdev",
+    "r/rust",
+    "r/Python",
+    "r/devops",
+    r"r/startups",
 ]
 
 _DEMO_TITLES = [
@@ -41,12 +46,12 @@ _DEMO_TITLES = [
 ]
 
 _DEMO_BODIES = [
-    "I've been experimenting with this for a few weeks now and the results are promising. Would love to hear others' experiences.",
-    "After migrating our stack to use this, we saw a 40% improvement in performance. Here's a detailed breakdown of the migration process and the challenges we faced.",
-    "There's a lot of hype around this topic, but I wanted to share some practical advice based on real-world usage in a production environment serving millions of users.",
-    "Just published a comprehensive guide covering architecture patterns, best practices, and common pitfalls. Feedback welcome!",
-    "I see a lot of questions about this, so I put together a step-by-step tutorial covering the basics. Perfect for beginners.",
-    "We evaluated several options and decided to go with this approach. Here's our decision-making process and the trade-offs we considered.",
+    "I've been experimenting with this and the results are promising.",
+    "After migrating our stack, we saw a 40% improvement in performance.",
+    "There's a lot of hype, but here's practical advice from real-world usage.",
+    "A comprehensive guide covering architecture patterns and best practices.",
+    "I put together a step-by-step tutorial covering the basics.",
+    "We evaluated several options. Trade-offs and decision process inside.",
 ]
 
 
@@ -72,9 +77,7 @@ class RedditFetcher(BaseFetcher):
         # 最終備援：Demo 模式
         return self._fetch_demo(topic, max_results)
 
-    async def _fetch_from_api(
-        self, base_url: str, topic: str, max_results: int
-    ) -> list[Article]:
+    async def _fetch_from_api(self, base_url: str, topic: str, max_results: int) -> list[Article]:
         """從指定 Reddit 端點採集資料。"""
         url = f"{base_url}/search.json"
         params = {

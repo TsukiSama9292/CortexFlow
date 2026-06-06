@@ -25,12 +25,12 @@ class Article(BaseModel):
     created_at: datetime | None = Field(default=None, description="原始發佈時間")
 
     # ── 後設 ──
-    fetched_at: datetime = Field(
-        default_factory=datetime.now, description="系統採集時間"
-    )
+    fetched_at: datetime = Field(default_factory=datetime.now, description="系統採集時間")
 
     # ── 擴充（Stage 3 填入） ──
-    extracted_html: str | None = Field(default=None, description="FireCrawl 提取的 Markdown")
+    extracted_html: str | None = Field(
+        default=None, description="提取的 Markdown 全文（Stage 3 填入）"
+    )
 
     # ── LLM 過濾結果（Stage 4 填入） ──
     relevance_score: float | None = Field(default=None, ge=0.0, le=10.0)
@@ -54,6 +54,7 @@ class ArticleAnalysis(BaseModel):
 
 class ReportSection(BaseModel):
     """報告中的一個章節。"""
+
     emoji: str = Field(description="章節 emoji 圖示")
     title: str = Field(description="章節標題")
     content: str = Field(description="章節內文")
@@ -61,6 +62,7 @@ class ReportSection(BaseModel):
 
 class ReportContent(BaseModel):
     """LLM 合成的完整報告結構。"""
+
     title: str = Field(description="報告主標題")
     sections: list[ReportSection] = Field(description="報告章節列表")
     key_points: list[str] = Field(description="📌 重點總結")
@@ -71,13 +73,11 @@ class PipelineInput(BaseModel):
     """管道執行參數。"""
 
     topic: str = Field(description="研究主題")
-    sources: list[Literal["reddit", "github"]] = Field(
-        default=["reddit", "github"]
-    )
+    sources: list[Literal["reddit", "github"]] = Field(default=["reddit", "github"])
     max_results_per_source: int = Field(default=20, ge=1, le=100)
     relevance_threshold: float = Field(default=5.0, ge=0.0, le=10.0)
     output_format: Literal["markdown", "json"] = Field(default="markdown")
-    output_path: str = Field(default="output_report.md")
+    output_path: str = Field(default="outputs/report.md")
 
 
 class PipelineOutput(BaseModel):

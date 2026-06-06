@@ -1,6 +1,8 @@
+.codegraph/
 __pycache__/
 *.py[cod]
 *$py.class
 .venv/
 *.egg-info/
 .env
+outputs/

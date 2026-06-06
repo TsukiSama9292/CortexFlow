@@ -1,6 +1,5 @@
 """FastExtractor — 以 trafilatura 為主的快速內容提取器。
 
-取代原本的 FireCrawl Client：
 1. trafilatura（主要）：本地快速提取，不需外部服務
 2. BeautifulSoup（備援）：當 trafilatura 失敗時使用
 """
@@ -100,7 +99,14 @@ class FastExtractor:
             for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
                 tag.decompose()
 
-            for selector in ["article", "main", ".post-content", ".entry-content", "#content", ".content"]:
+            for selector in [
+                "article",
+                "main",
+                ".post-content",
+                ".entry-content",
+                "#content",
+                ".content",
+            ]:
                 container = soup.select_one(selector)
                 if container:
                     text = container.get_text(separator="\n", strip=True)

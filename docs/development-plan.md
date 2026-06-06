@@ -1,95 +1,72 @@
 # CortexFlow 產品開發路線圖
 
-> 階段：Prototype → MVP → MMP → MLP
-> 狀態：PoC ✅ 已完成
+> 階段：Prototype ✅ → MVP → MMP → MLP
 
 ---
 
-## 當前狀態總覽（PoC 已完成）
+## 當前狀態總覽（Prototype ✅ 已完成）
 
-### ✅ 已實現
-- 5 階段 Pipeline 端到端運作（Fetch → Normalize → Extract → Analyze → Synthesize → Report）
-- 雙渠道資料採集（Reddit 三重 fallback + GitHub Trending）
-- trafilatura 為主的內容提取器（取代 FireCrawl）
-- Map-Reduce LLM 分析模式（併發評分+摘要+子分析 → 彙總合成）
-- Stratechery 風格 Markdown 報告 + JSON 結構化輸出
-- CLI 介面（`uv run cortexflow`）
-- 完整的錯誤隔離與最佳努力策略
-- 降級模式（無 LLM Key 仍可產出列表報告）
+### ✅ Phase 0 → 1 完成項目
 
-### 🔴 待清理問題
-| 問題 | 嚴重性 | 說明 |
-|------|--------|------|
-| 死程式碼 | 中 | `extractor.py`、`firecrawl_client.py`、`fallback_parser.py`、`summarizer.py`、`llm_judge.py` 共 5 個未使用的檔案 |
-| `sys.path` hack | 低 | `__main__.py` 使用 `sys.path.insert(0, ...)` 來 import `main.py` |
-| 過時的註解 | 低 | `Article.extracted_html` 的 field description 仍提到 FireCrawl |
-| 無測試覆蓋 | 高 | 雖有 pytest 依賴但無任何測試 |
-| 無型態檢查 | 中 | 無 `mypy`/`pyright`/`ruff` 設定 |
-| 無結構化日誌 | 中 | 僅靠 `rich.console` 輸出，無 logging 模組整合 |
-| 硬編碼 Token 成本 | 低 | 使用 `gpt-4o-mini` 的固定費率，與實際設定的 `OPENAI_MODEL` 脫鉤 |
-| Token 成本模型感知 | 中 | 不同模型價格不同，應動態查詢或設定 |
-| 空 docs/ 目錄 | 低 | 目錄存在但無任何文件 |
-| FireCrawl 設定殘留 | 低 | `settings.py` 仍保留 `firecrawl_api_key`、`firecrawl_api_url` 欄位 |
+| 類別 | 項目 | 狀態 |
+|------|------|------|
+| **死程式碼清理** | 移除 5 個 legacy 檔案（extractor.py、firecrawl_client.py、fallback_parser.py、summarizer.py、llm_judge.py） | ✅ |
+| **`__main__.py` 重構** | 消除 `sys.path.insert` hack，改為 `from cortexflow.cli import main` | ✅ |
+| **過時註解清理** | `Article.extracted_html` field description 及 `fast_extractor.py` docstring 已清理 | ✅ |
+| **FireCrawl 殘留設定** | `settings.py`、`.env.example`、`.env` 中全部移除 | ✅ |
+| **Ruff 設定** | `pyproject.toml` 含 `[tool.ruff]`（line-length=100, quote-style=double, lint rules） | ✅ |
+| **pyright 設定** | `pyproject.toml` 含 `[tool.pyright]`（typeCheckingMode=basic） | ✅ |
+| **Module docstring** | 所有 Package `__init__.py` 補上說明 | ✅ |
+| **測試覆蓋** | 47 測項（schema 19 + errors 11 + normalizer 9 + pipeline 8），`pytest -q` 全通過 | ✅ |
+| **Rich 進度條** | 每個 Stage 執行時顯示 `console.status` spinner + 即時計時 | ✅ |
+| **彩色輸出** | 一致色彩系統（✔ 綠 / ✘ 紅 / ⚠ 黃 / 💡 dim / 時間 cyan） | ✅ |
+| **互動式模式** | `uv run cortexflow`（無參數）→ 逐步引導主題/來源/Demo 切換 | ✅ |
+| **Pipeline 圖** | 啟動時顯示 5 階段 ASCII 管線圖（Map-Reduce 標示） | ✅ |
+| **Token 預估** | 執行前依使用者設定估算 LLM 成本 | ✅ |
+| **Demo Mode** | `--demo` 不需 API Key，Mock Reddit/GitHub 資料 + Mock LLM 分析 | ✅ |
+| **環境檢查** | 啟動前檢查 Python 版本、套件載入、API Key、Proxy URL | ✅ |
+| **錯誤修復建議** | 每階段失敗顯示 💡 建議，環境問題顯示具體修復指令 | ✅ |
+| **錄製腳本** | `docs/demo-recording.sh` — 支援 `asciinema` 與純文字模式 | ✅ |
+| **簡報模板** | `docs/presentation-template.md` — 10 頁投影片大綱 | ✅ |
+| **範例報告庫** | `docs/samples/` 含 5 份不同主題報告 | ✅ |
+| **README 更新** | Demo 模式說明、CLI 輸出範例、參數表格 | ✅ |
+| **輸出目錄** | 預設輸出 `outputs/report.md`，`outputs/` 已加入 `.gitignore` | ✅ |
+
+### 🔴 剩餘待辦（非 Prototype 範圍）
+
+| 問題 | 規劃階段 | 說明 |
+|------|---------|------|
+| 無結構化日誌 | **MVP** | 僅靠 `rich.console`，無 logging 模組 |
+| 硬編碼 Token 成本 | **MMP** | `gpt-4o-mini` 固定費率，與 `OPENAI_MODEL` 脫鉤 |
+| 模型感知計價 | **MMP** | 不同模型價格不同，應動態查詢 |
 
 ---
 
-## 階段一：Prototype（原型製作）
+## 階段一：Prototype ✅（已完成）
 
-### 核心目標：以 UX 展現產品願景，為競賽/募資簡報準備
+本階段耗時約 **1 週**（含 audit 補正），原始規劃 2-3 週。
 
-本階段不追求功能完整，而是要讓任何人第一次使用時就感受到產品的價值與品質。
+### 驗收結果
 
-### 🎯 關鍵成果
-
-#### 1.1 CLI 使用者體驗大升級
-- [ ] **Rich 即時進度條**：每個 Stage 執行時顯示 spinner + 即時狀態更新
-- [ ] **彩色結構化輸出**：階段標題、計時、錯誤訊息使用一致色彩系統
-- [ ] **互動式模式**：`uv run cortexflow` 不加參數時進入互動式引導
-- [ ] **精美的 Pipeline 視覺化**：啟動時以 ASCII 圖繪製 5 階段管線與當前位置
-- [ ] **即時 Token 預估**：執行前先預估 LLM 成本並徵求確認
-
-#### 1.2 程式碼品質清理（可展示性）
-- [ ] **移除全部死程式碼**：刪除 5 個未使用的 legacy 檔案
-- [ ] **重構 `__main__.py`**：消除 `sys.path` hack，改為標準 package 匯入
-- [ ] **清理過時註解與欄位名稱**：消除 FireCrawl 相關的殘留文字
-- [ ] **新增 `ruff` 與基本設定**：確保程式碼風格一致，適合公開展示
-- [ ] **補上 module-level docstring**：所有模組至少有一行說明用途
-
-#### 1.3 展示準備
-- [ ] **Demo Mode 強化**：`--demo` 參數，不須任何 API Key 即可展示完整 Pipeline（含 LLM stage 使用模擬分析）
-- [ ] **截圖/GIF 自動產生**：撰寫一鍵產生 CLI 執行 demo 錄製的腳本
-- [ ] **README 更新**：加入實際執行截圖、GIF 展示、快速入門影片連結
-- [ ] **產出範例報告庫**：`docs/samples/` 放入 3-5 份不同主題的實際輸出範例
-- [ ] **簡報模板**：投影片大綱（包含 Pipeline 架構圖、Map-Reduce 流程、實際產出範例）
-
-#### 1.4 設定與環境改善
-- [ ] **啟動環境檢查**：執行前驗證必要套件、網路連線、API Key 格式
-- [ ] **更好的錯誤訊息**：每個錯誤附帶「如何修復」的建議
-- [ ] **移除 FireCrawl 殘留設定**：從 `settings.py` 與 `.env.example` 中移除未使用的欄位
-
-### 📊 驗收標準
-| 標準 | 說明 |
+| 標準 | 結果 |
 |------|------|
-| 首次使用者體驗 | 從 `git clone` 到產出第一份報告 < 3 分鐘，無需閱讀文件 |
-| 視覺品質 | CLI 輸出可直接截圖放入簡報，無需後製 |
-| Demo 可執行性 | 在任何 Python 3.11+ 環境，`uv sync && uv run cortexflow --topic test --demo` 即可展示完整流程 |
-| 程式碼可展示性 | 無死程式碼、風格一致、型態提示完整 |
-
-### ⏱ 預估工時：2-3 週
+| 首次使用者體驗 | `git clone && uv sync && uv run cortexflow --topic test --demo` → 1 分鐘產出報告 |
+| 視覺品質 | CLI 輸出可直接截圖放入簡報 |
+| Demo 可執行性 | 任一 Python 3.11+ 環境，無 API Key 即可展示 |
+| 程式碼可展示性 | 零死程式碼、Ruff 零錯誤、型態提示完整 |
 
 ---
 
-## 階段二：MVP（最小可行性產品）
+## 階段二：MVP（最小可行性產品）— 下一階段
 
 ### 核心目標：讓真實使用者願意在實際工作中使用
 
 ### 🎯 關鍵成果
 
 #### 2.1 測試與品質基礎建設
-- [ ] **單元測試**：覆蓋 `Normalizer`、`errors`、`schema` 等純邏輯模組
+- [ ] **單元測試擴充**：覆蓋 fetchers、extractor、reporter 模組（目標 > 80 測項）
 - [ ] **整合測試**：Mock HTTP/LLM 的 Pipeline 端到端測試
-- [ ] **Fixture 管理**：`conftest.py` 含測試用 Article 工廠、Mock LLM response
-- [ ] **CI/CD**：GitHub Actions（PR 時自動跑 pytest + ruff + type check）
+- [ ] **CI/CD**：GitHub Actions（PR 時自動跑 pytest + ruff + pyright）
 - [ ] **pre-commit hook**：提交前自動檢查格式與型態
 
 #### 2.2 可觀測性
@@ -111,10 +88,11 @@
 - [ ] **更好的降級模式**：當 LLM 失敗時，使用規則式關鍵字評分作為降級
 
 #### 2.5 型態與靜態分析
-- [ ] **pyright / mypy strict mode**：整份 codebase 通過 strict type check
+- [ ] **pyright strict mode**：整份 codebase 通過 strict type check
 - [ ] **ruff 完整規則集**：導入所有相關 linter rules
 
 ### 📊 驗收標準
+
 | 標準 | 說明 |
 |------|------|
 | 測試覆蓋率 | > 70%（關鍵路徑：Pipeline orchestration、LLM 分析、資料去重） |
@@ -160,6 +138,7 @@
 - [ ] **簡易 Web Dashboard**：執行歷史、報告瀏覽、手動觸發
 
 ### 📊 驗收標準
+
 | 標準 | 說明 |
 |------|------|
 | 成本效益 | 與 Phase 1 相比，相同資訊量成本降低 > 50%（透過快取 + 選擇性提取） |
@@ -202,6 +181,7 @@
 - [ ] **來源品質評分**：基於歷史資料評估各來源的可靠度與相關性
 
 ### 📊 驗收標準
+
 | 標準 | 說明 |
 |------|------|
 | 使用者留存 | 使用者一週後回訪率 > 60% |
@@ -217,13 +197,12 @@
 
 | 階段 | 核心主題 | 預計工時 | 關鍵交付 |
 |------|---------|---------|---------|
-| **Prototype** | UX 展現產品願景 | 2-3 週 | 精美 CLI、Demo mode、程式碼清理 |
-| **MVP** | 讓真實使用者用起來 | 4-6 週 | 測試、CI、新來源、可觀測性、執行記錄 |
+| **Prototype** | UX 展現產品願景 | ✅ **1 週**（已完工） | 精美 CLI、Demo mode、47 tests、程式碼清理 |
+| **MVP** | 讓真實使用者用起來 | 4-6 週 | 測試擴充、CI、新來源、結構化日誌、執行記錄 |
 | **MMP** | 具備商業推廣價值 | 6-8 週 | Docker、通知、成本優化、PDF/HTML 輸出 |
 | **MLP** | 使用者愛不釋手 | 8-12 週 | Web Dashboard、生態系、智慧功能、社群 |
 
 ### 關鍵成功因素
-1. **Prototype 階段不要急著加功能**：UX 打磨是競賽/募資的決勝點
-2. **MVP 階段測試先行**：沒有測試的專案無法說服別人信賴
-3. **MMP 階段專注成本**：LLM 成本是商業化最大的障礙
-4. **MLP 階段重使用者反饋**：功能是做出來的，但可愛是被愛出來的
+1. **MVP 階段測試先行**：Prototype 已建立 47 測項基礎，MVP 應衝到 > 80% 覆蓋
+2. **MMP 階段專注成本**：LLM 成本是商業化最大的障礙
+3. **MLP 階段重使用者反饋**：功能是做出來的，但可愛是被愛出來的

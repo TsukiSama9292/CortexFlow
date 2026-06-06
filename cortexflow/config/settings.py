@@ -19,10 +19,6 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = ""  # optional, for proxy/compatible APIs
 
-    # ─── FireCrawl ───
-    firecrawl_api_key: str = ""
-    firecrawl_api_url: str = "https://api.firecrawl.dev"
-
     # ─── Reddit ───
     reddit_client_id: str = ""
     reddit_client_secret: str = ""

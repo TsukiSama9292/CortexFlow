@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from cortexflow.config.settings import settings
-from cortexflow.core.schema import ArticleAnalysis, ReportContent, ReportSection
+from cortexflow.core.schema import ArticleAnalysis, ReportContent
 
 _INPUT_TOKEN_COST = 0.15 / 1_000_000
 _OUTPUT_TOKEN_COST = 0.60 / 1_000_000
@@ -32,36 +32,38 @@ class Synthesizer:
             max_tokens=4096,
         )
 
-        self._prompt = ChatPromptTemplate.from_messages([
-            (
-                "system",
-                "你是一位專業的科技情報分析師。你的任務是將多篇「已分析過」的文章"
-                "整合成一份具有深度洞察的結構化報告。\n\n"
-                "每篇文章已經過初步分析，包含：\n"
-                "- summary: 文章摘要\n"
-                "- sub_analysis: 深度子分析（獨特洞察）\n"
-                "- key_insights: 關鍵洞察\n"
-                "- relevance_score: 相關性分數\n"
-                "- url: 原始連結\n\n"
-                "報告要求：\n"
-                "- 使用繁體中文\n"
-                "- 報告風格類似 Stratechery / Platformer 等科技分析媒體\n"
-                "- 交叉比對、整合多篇文章的觀點，找出共通趨勢與矛盾\n"
-                "- 提出對開發者/團隊的具體建議\n"
-                "- 不要逐篇摘要，而是提煉跨文章的全局觀點",
-            ),
-            (
-                "human",
-                "研究主題：{topic}\n\n"
-                "以下是各篇文章的分析結果（依相關性排序）：\n"
-                "{analyses_text}\n\n"
-                "請產出結構化報告，包含：\n"
-                "1. 一個引人注目的主標題（含 emoji 和關鍵數據）\n"
-                "2. 3-5 個分析章節（每個含 emoji + 標題 + 深度內文）\n"
-                "3. 📌 重點總結（3-6 條 bullet point）\n"
-                "4. 🔗 相關連結",
-            ),
-        ])
+        self._prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "你是一位專業的科技情報分析師。你的任務是將多篇「已分析過」的文章"
+                    "整合成一份具有深度洞察的結構化報告。\n\n"
+                    "每篇文章已經過初步分析，包含：\n"
+                    "- summary: 文章摘要\n"
+                    "- sub_analysis: 深度子分析（獨特洞察）\n"
+                    "- key_insights: 關鍵洞察\n"
+                    "- relevance_score: 相關性分數\n"
+                    "- url: 原始連結\n\n"
+                    "報告要求：\n"
+                    "- 使用繁體中文\n"
+                    "- 報告風格類似 Stratechery / Platformer 等科技分析媒體\n"
+                    "- 交叉比對、整合多篇文章的觀點，找出共通趨勢與矛盾\n"
+                    "- 提出對開發者/團隊的具體建議\n"
+                    "- 不要逐篇摘要，而是提煉跨文章的全局觀點",
+                ),
+                (
+                    "human",
+                    "研究主題：{topic}\n\n"
+                    "以下是各篇文章的分析結果（依相關性排序）：\n"
+                    "{analyses_text}\n\n"
+                    "請產出結構化報告，包含：\n"
+                    "1. 一個引人注目的主標題（含 emoji 和關鍵數據）\n"
+                    "2. 3-5 個分析章節（每個含 emoji + 標題 + 深度內文）\n"
+                    "3. 📌 重點總結（3-6 條 bullet point）\n"
+                    "4. 🔗 相關連結",
+                ),
+            ]
+        )
 
         self._chain = self._prompt | self.llm.with_structured_output(
             ReportContent, include_raw=True
@@ -71,9 +73,7 @@ class Synthesizer:
         self.total_cost_usd: float = 0.0
         self.calls: int = 0
 
-    async def synthesize(
-        self, analyses: list[ArticleAnalysis]
-    ) -> ReportContent | None:
+    async def synthesize(self, analyses: list[ArticleAnalysis]) -> ReportContent | None:
         """將多個 ArticleAnalysis 彙總為結構化報告。"""
         if not analyses:
             return None
@@ -84,10 +84,12 @@ class Synthesizer:
         analyses_text = self._format_analyses(analyses)
 
         try:
-            result = await self._chain.ainvoke({
-                "topic": self.topic,
-                "analyses_text": analyses_text,
-            })
+            result = await self._chain.ainvoke(
+                {
+                    "topic": self.topic,
+                    "analyses_text": analyses_text,
+                }
+            )
 
             raw: AIMessage = result["raw"]
             parsed: ReportContent = result["parsed"]
@@ -96,9 +98,7 @@ class Synthesizer:
             in_tokens = usage.get("input_tokens", 0)
             out_tokens = usage.get("output_tokens", 0)
             self.total_tokens += in_tokens + out_tokens
-            self.total_cost_usd += (
-                in_tokens * _INPUT_TOKEN_COST + out_tokens * _OUTPUT_TOKEN_COST
-            )
+            self.total_cost_usd += in_tokens * _INPUT_TOKEN_COST + out_tokens * _OUTPUT_TOKEN_COST
             self.calls += 1
 
             return parsed
