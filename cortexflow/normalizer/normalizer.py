@@ -1,15 +1,18 @@
-"""Stage 2: 標準化層 — 去重與資料品質檢查。"""
+"""Stage 2: 標準化層 — 去重與資料品質檢查。."""
 
 from __future__ import annotations
 
-from cortexflow.core.schema import Article
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cortexflow.core.schema import Article
 
 
 class Normalizer:
-    """跨渠道資料標準化與去重。"""
+    """跨渠道資料標準化與去重。."""
 
     def deduplicate(self, articles: list[Article]) -> list[Article]:
-        """以 URL + content fingerprint 進行去重。"""
+        """以 URL + content fingerprint 進行去重。."""
         seen_urls: set[str] = set()
         seen_fingerprints: set[str] = set()
         unique: list[Article] = []

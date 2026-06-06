@@ -1,4 +1,4 @@
-"""GitHub Trending 資料採集器。
+"""GitHub Trending 資料採集器。.
 
 從 https://github.com/trending 爬取當前的趨勢專案，更貼近開發者社群時事。
 不需要 API Token（無 Token 時以未認證身份請求，rate limit 較低但仍可使用）。
@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from cortexflow.config.settings import settings
 from cortexflow.core.errors import FetchError
@@ -20,11 +20,20 @@ from cortexflow.fetchers.base import BaseFetcher
 
 
 class GitHubFetcher(BaseFetcher):
-    """從 GitHub Trending 頁面採集熱門專案。"""
+    """從 GitHub Trending 頁面採集熱門專案。."""
 
     TRENDING_URL = "https://github.com/trending"
 
     async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
+        """根據主題從特定渠道採集資料。.
+
+        Args:
+            topic: 研究主題。
+            max_results: 最大結果數。
+
+        Returns:
+            Article 列表。
+        """
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -47,7 +56,7 @@ class GitHubFetcher(BaseFetcher):
 
         try:
             async with httpx.AsyncClient(
-                timeout=settings.request_timeout, follow_redirects=True
+                timeout=settings.request_timeout, follow_redirects=True,
             ) as client:
                 resp = await client.get(trending_url, headers=headers)
                 resp.raise_for_status()
@@ -55,15 +64,14 @@ class GitHubFetcher(BaseFetcher):
         except Exception as exc:
             raise FetchError("github", f"Trending 頁面請求失敗: {exc}", cause=exc) from exc
 
-        articles = self._parse_trending(html, topic, max_results)
-        return articles
+        return self._parse_trending(html, topic, max_results)
 
     # ─────────────────────────────────────────────
     # 內部方法
     # ─────────────────────────────────────────────
 
     def _detect_language(self, topic: str) -> str | None:
-        """若 topic 是常見程式語言名稱，回傳該語言 slug，否則 None。
+        """若 topic 是常見程式語言名稱，回傳該語言 slug，否則 None。.
 
         例如 "python", "rust", "typescript" 會被辨識為語言過濾條件。
         """
@@ -103,24 +111,23 @@ class GitHubFetcher(BaseFetcher):
         return None
 
     def _parse_trending(self, html: str, topic: str, max_results: int) -> list[Article]:
-        """解析 Trending 頁面的 HTML，回傳符合主題的 Article 列表。"""
+        """解析 Trending 頁面的 HTML，回傳符合主題的 Article 列表。."""
         soup = BeautifulSoup(html, "lxml")
         rows = soup.select("article.Box-row")
-
         articles: list[Article] = []
-        topic_lower = topic.strip().lower()
+
+        topic_lower = topic.lower()
 
         for row in rows:
-            # ── 專案名稱 ──
-            h2_link = row.select_one("h2 a")
-            if not h2_link:
+            # ── 專案名稱與連結 ──
+            h2 = row.select_one("h2.h3 a")
+            if not h2:
                 continue
-            href = h2_link.get("href", "").strip("/")
-            full_name = href.replace("/", "/", 1) if "/" in href else href
+            full_name = h2.get_text(strip=True).replace(" ", "")
 
             # ── 描述 ──
-            desc_p = row.select_one("p")
-            description = desc_p.get_text(strip=True) if desc_p else ""
+            p = row.select_one("p.col-9")
+            description = p.get_text(strip=True) if p else ""
 
             # ── 語言 ──
             lang_span = row.select_one("[itemprop='programmingLanguage']")
@@ -138,13 +145,12 @@ class GitHubFetcher(BaseFetcher):
 
             # ── 今日新增星星 ──
             today_stars_span = row.find("span", class_="d-inline-block float-sm-right")
-            if today_stars_span:
+            if isinstance(today_stars_span, Tag):
                 match = re.search(r"(\d[\d,]*)", today_stars_span.get_text())
                 if match:
-                    try:
+                    import contextlib
+                    with contextlib.suppress(ValueError):
                         int(match.group(1).replace(",", ""))
-                    except ValueError:
-                        pass
 
             # ── 主題過濾 ──
             combined = f"{full_name} {description} {language}".lower()
@@ -162,8 +168,8 @@ class GitHubFetcher(BaseFetcher):
                     author=full_name.split("/")[0] if "/" in full_name else "",
                     url=f"https://github.com/{full_name}",
                     score=stars,  # 使用總星星數作為權重
-                    created_at=datetime.now(),  # Trending 不提供建立時間
-                )
+                    created_at=datetime.now(tz=UTC),  # Trending 不提供建立時間
+                ),
             )
 
             if len(articles) >= max_results:
@@ -173,7 +179,7 @@ class GitHubFetcher(BaseFetcher):
 
     @staticmethod
     def _is_relevant(combined: str, topic: str) -> bool:
-        """檢查 trending 專案的名稱/描述是否與主題相關。
+        """檢查 trending 專案的名稱/描述是否與主題相關。.
 
         策略：
         - 完全比對：topic 作為子字串出現

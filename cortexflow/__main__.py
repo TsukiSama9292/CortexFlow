@@ -1,4 +1,4 @@
-"""CortexFlow 套件入口 — python -m cortexflow。"""
+"""CortexFlow 套件入口 — python -m cortexflow。."""
 
 from cortexflow.cli import main
 

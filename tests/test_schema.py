@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -11,7 +11,6 @@ from cortexflow.core.schema import (
     PipelineInput,
     PipelineOutput,
     ReportContent,
-    ReportSection,
 )
 
 
@@ -32,7 +31,7 @@ class TestArticle:
             text="Some text content",
             url="https://reddit.com/r/test",
             score=42,
-            created_at=datetime(2026, 6, 1),
+            created_at=datetime(2026, 6, 1, tzinfo=UTC),
             extracted_html="<p>html</p>",
             relevance_score=7.5,
             summary="summary",
@@ -51,7 +50,7 @@ class TestArticle:
     def test_relevance_score_range(self):
         with pytest.raises(ValidationError):
             Article(
-                id="x1", source="github", source_id="1", relevance_score=15.0
+                id="x1", source="github", source_id="1", relevance_score=15.0,
             )
 
     def test_score_default_zero(self, sample_article):

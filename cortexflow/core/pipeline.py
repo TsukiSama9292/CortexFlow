@@ -1,4 +1,4 @@
-"""Pipeline Orchestrator — 依序執行 Stage 1→5 的核心協調器。
+"""Pipeline Orchestrator — 依序執行 Stage 1→5 的核心協調器。.
 
 架構：
   Fetch → Normalize → FastExtract → Analyze(併發) → Synthesize → Report
@@ -11,8 +11,8 @@ Stage 4 (Analyze) 是 Map-Reduce 模式：
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 
@@ -27,6 +27,9 @@ from cortexflow.core.schema import (
 from cortexflow.normalizer.normalizer import Normalizer
 from cortexflow.reporter.json_reporter import JSONReporter
 from cortexflow.reporter.markdown_reporter import MarkdownReporter
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
 
 _STAGE_LABELS: dict[str, str] = {
     "fetch_reddit": "Reddit 採集",
@@ -54,7 +57,7 @@ _TOKEN_COST_SYNTHESIS = 0.0010
 
 @dataclass
 class StageResult:
-    """單一 Stage 的執行結果記錄。"""
+    """單一 Stage 的執行結果記錄。."""
 
     stage_name: str
     success: bool
@@ -64,16 +67,17 @@ class StageResult:
 
 
 class Pipeline:
-    """五階段固定管道協調器。"""
+    """五階段固定管道協調器。."""
 
-    def __init__(self, inp: PipelineInput, demo: bool = False) -> None:
+    def __init__(self, inp: PipelineInput, *, demo: bool = False) -> None:
+        """初始化管道。."""
         self.inp = inp
         self.demo = demo
         self.articles: list[Article] = []
         self.analyses: list[ArticleAnalysis] = []
         self.stage_results: list[StageResult] = []
-        self.errors: list[dict] = []
-        self.llm_usage: dict = {
+        self.errors: list[dict[str, str]] = []
+        self.llm_usage: dict[str, Any] = {
             "total_tokens": 0,
             "total_cost_usd": 0.0,
             "calls": 0,
@@ -85,7 +89,7 @@ class Pipeline:
     # ────────────────────────────
 
     async def run(self) -> PipelineOutput:
-        """執行完整管道，回傳結構化結果。"""
+        """執行完整管道，回傳結構化結果。."""
         console = Console()
 
         self._print_pipeline_diagram(console)
@@ -129,8 +133,10 @@ class Pipeline:
     # Stage 執行包裝器
     # ────────────────────────────
 
-    async def _run_stage(self, name: str, fn: Callable, console: Console) -> None:
-        """執行單一 Stage，含計時、spinner 與錯誤捕捉。"""
+    async def _run_stage(
+        self, name: str, fn: Callable[[], Coroutine[Any, Any, None]], console: Console,
+    ) -> None:
+        """執行單一 Stage，含計時、spinner 與錯誤捕捉。."""
         label = _STAGE_LABELS.get(name, name)
         status = console.status(f"{label}…", spinner="dots")
         status.start()
@@ -146,7 +152,7 @@ class Pipeline:
                 items_count=len(self.articles),
             )
             console.print(f"  [green]✔[/green] {label} 完成  [dim]({elapsed:.2f}s)[/dim]")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             elapsed = time.monotonic() - t0
             status.stop()
             result = StageResult(
@@ -206,7 +212,7 @@ class Pipeline:
                     author=name.split("/")[0] if "/" in name else "",
                     url=f"https://github.com/{name}",
                     score=100,
-                )
+                ),
             )
 
     # ────────────────────────────
@@ -240,7 +246,7 @@ class Pipeline:
 
         analyzer = ArticleAnalyzer(topic=self.inp.topic)
         self.analyses = await analyzer.analyze(
-            self.articles, threshold=self.inp.relevance_threshold
+            self.articles, threshold=self.inp.relevance_threshold,
         )
 
         passed_ids = {a.article_id for a in self.analyses}
@@ -266,7 +272,7 @@ class Pipeline:
                     summary=a.summary,
                     sub_analysis=a.sub_analysis,
                     key_insights=a.key_insights,
-                )
+                ),
             )
 
     # ────────────────────────────
@@ -306,10 +312,7 @@ class Pipeline:
     # ────────────────────────────
 
     async def _report(self) -> None:
-        if self.inp.output_format == "json":
-            reporter = JSONReporter()
-        else:
-            reporter = MarkdownReporter()
+        reporter = JSONReporter() if self.inp.output_format == "json" else MarkdownReporter()
         reporter.generate(
             self.articles,
             self.inp,
@@ -349,7 +352,7 @@ class Pipeline:
         estimated = max_articles * _TOKEN_COST_PER_ARTICLE + _TOKEN_COST_SYNTHESIS
         console.print(
             f"  [dim]💡 預估 LLM 成本: ~${estimated:.4f}"
-            f"（{max_articles} 篇文章分析 + 1 次合成）[/dim]"
+            f"（{max_articles} 篇文章分析 + 1 次合成）[/dim]",
         )
 
     def _print_summary(self, console: Console) -> None:
@@ -359,7 +362,7 @@ class Pipeline:
             status_icon = "[green]✔" if r.success else "[red]✘"
             console.print(
                 f"  {status_icon}[/] {label:12s}"
-                f"  [cyan]{r.duration:6.2f}s[/cyan]  {r.items_count} items"
+                f"  [cyan]{r.duration:6.2f}s[/cyan]  {r.items_count} items",
             )
         if self.llm_usage["calls"] > 0:
             console.print()
@@ -369,7 +372,7 @@ class Pipeline:
         console.print()
 
     def _build_output(self) -> PipelineOutput:
-        stats = {}
+        stats: dict[str, dict[str, Any]] = {}
         for r in self.stage_results:
             stats[r.stage_name] = {
                 "success": r.success,

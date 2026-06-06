@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -24,7 +24,7 @@ def sample_article() -> Article:
         text="A sample repository description for testing.",
         url="https://github.com/owner/repo",
         score=100,
-        created_at=datetime(2026, 1, 1),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 

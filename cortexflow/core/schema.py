@@ -1,15 +1,15 @@
-"""統一資料模型 — 跨渠道的標準化 Article Schema。"""
+"""統一資料模型 — 跨渠道的標準化 Article Schema。."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 
 class Article(BaseModel):
-    """經過標準化處理後的單一情報條目。"""
+    """經過標準化處理後的單一情報條目。."""
 
     # ── 識別 ──
     id: str = Field(description="全域唯一 ID（由 source + source_id 組成）")
@@ -25,11 +25,13 @@ class Article(BaseModel):
     created_at: datetime | None = Field(default=None, description="原始發佈時間")
 
     # ── 後設 ──
-    fetched_at: datetime = Field(default_factory=datetime.now, description="系統採集時間")
+    fetched_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="系統採集時間",
+    )
 
     # ── 擴充（Stage 3 填入） ──
     extracted_html: str | None = Field(
-        default=None, description="提取的 Markdown 全文（Stage 3 填入）"
+        default=None, description="提取的 Markdown 全文（Stage 3 填入）",
     )
 
     # ── LLM 過濾結果（Stage 4 填入） ──
@@ -41,7 +43,7 @@ class Article(BaseModel):
 
 
 class ArticleAnalysis(BaseModel):
-    """單篇文章的 LLM 分析結果 — 整合評分、摘要、子分析。"""
+    """單篇文章的 LLM 分析結果 — 整合評分、摘要、子分析。."""
 
     article_id: str = Field(description="對應的 Article ID")
     title: str = Field(description="文章標題")
@@ -53,7 +55,7 @@ class ArticleAnalysis(BaseModel):
 
 
 class ReportSection(BaseModel):
-    """報告中的一個章節。"""
+    """報告中的一個章節。."""
 
     emoji: str = Field(description="章節 emoji 圖示")
     title: str = Field(description="章節標題")
@@ -61,7 +63,7 @@ class ReportSection(BaseModel):
 
 
 class ReportContent(BaseModel):
-    """LLM 合成的完整報告結構。"""
+    """LLM 合成的完整報告結構。."""
 
     title: str = Field(description="報告主標題")
     sections: list[ReportSection] = Field(description="報告章節列表")
@@ -70,7 +72,7 @@ class ReportContent(BaseModel):
 
 
 class PipelineInput(BaseModel):
-    """管道執行參數。"""
+    """管道執行參數。."""
 
     topic: str = Field(description="研究主題")
     sources: list[Literal["reddit", "github"]] = Field(default=["reddit", "github"])
@@ -81,11 +83,11 @@ class PipelineInput(BaseModel):
 
 
 class PipelineOutput(BaseModel):
-    """管道執行結果。"""
+    """管道執行結果。."""
 
     input: PipelineInput
-    articles: list[Article] = Field(default_factory=list)
-    stage_stats: dict[str, dict] = Field(default_factory=dict)
-    errors: list[dict] = Field(default_factory=list)
-    llm_usage: dict = Field(default_factory=dict)
+    articles: list[Article] = Field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
+    stage_stats: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    errors: list[dict[str, str]] = Field(default_factory=list)  # pyright: ignore[reportUnknownVariableType]
+    llm_usage: dict[str, Any] = Field(default_factory=dict)
     report_content: ReportContent | None = Field(default=None)

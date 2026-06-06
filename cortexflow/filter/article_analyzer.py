@@ -1,4 +1,4 @@
-"""ArticleAnalyzer — 對單篇文章進行一次性 LLM 分析。
+"""ArticleAnalyzer — 對單篇文章進行一次性 LLM 分析。.
 
 整合三個任務到一次 LLM 呼叫：
 1. 評分（Judge）：主題相關性 0.0~10.0
@@ -9,15 +9,18 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING, Any, cast
 
-from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from rich.console import Console
 
 from cortexflow.config.settings import settings
 from cortexflow.core.schema import Article, ArticleAnalysis
+
+if TYPE_CHECKING:
+    from langchain_core.messages import AIMessage
 
 console = Console()
 
@@ -26,7 +29,7 @@ _OUTPUT_TOKEN_COST = 0.60 / 1_000_000
 
 
 class _RawAnalysis(BaseModel):
-    """LLM 回傳的原始結構化分析結果。"""
+    """LLM 回傳的原始結構化分析結果。."""
 
     relevance_score: float = Field(ge=0.0, le=10.0, description="文章與主題的相關性分數")
     summary: str = Field(description="繁體中文摘要（50-100 字，客觀陳述）")
@@ -35,20 +38,25 @@ class _RawAnalysis(BaseModel):
 
 
 class ArticleAnalyzer:
-    """對 Articles 進行一次性 LLM 分析（併發執行）。"""
+    """對 Articles 進行一次性 LLM 分析（併發執行）。."""
 
     def __init__(self, topic: str) -> None:
+        """初始化分析器。.
+
+        Args:
+            topic: 研究主題。
+        """
         self.topic = topic
 
+        # type: ignore[call-arg]
         self.llm = ChatOpenAI(
             model=settings.openai_model,
-            api_key=settings.openai_api_key,
+            api_key=SecretStr(settings.openai_api_key) if settings.openai_api_key else None,
             base_url=settings.openai_base_url or None,
             temperature=0.0,
-            max_tokens=1024,
         )
 
-        self._prompt = ChatPromptTemplate.from_messages(
+        self._prompt = ChatPromptTemplate.from_messages(  # pyright: ignore[reportUnknownMemberType]
             [
                 (
                     "system",
@@ -73,10 +81,12 @@ class ArticleAnalyzer:
                     "原文連結：{url}\n\n"
                     "文章內容：\n{content}",
                 ),
-            ]
+            ],
         )
 
-        self._chain = self._prompt | self.llm.with_structured_output(_RawAnalysis, include_raw=True)
+        self._chain: Any = (
+            self._prompt | self.llm.with_structured_output(_RawAnalysis, include_raw=True)
+        )  # pyright: ignore[reportUnknownMemberType]
 
         # ── 用量追蹤 ──
         self.total_tokens: int = 0
@@ -84,9 +94,9 @@ class ArticleAnalyzer:
         self.calls: int = 0
 
     async def analyze(
-        self, articles: list[Article], threshold: float = 5.0
+        self, articles: list[Article], threshold: float = 5.0,
     ) -> list[ArticleAnalysis]:
-        """對所有文章進行併發 LLM 分析。
+        """對所有文章進行併發 LLM 分析。.
 
         每篇文章獨立呼叫 LLM（併發執行），只保留通過 threshold 的結果。
         """
@@ -109,7 +119,7 @@ class ArticleAnalyzer:
         return passed
 
     async def _rate_and_analyze(self, article: Article, threshold: float) -> ArticleAnalysis | None:
-        """對單篇文章進行一次 LLM 呼叫（評分＋摘要＋子分析）。"""
+        """對單篇文章進行一次 LLM 呼叫（評分＋摘要＋子分析）。."""
         content = article.extracted_html or article.text or ""
         content = content[:6000]
 
@@ -122,16 +132,16 @@ class ArticleAnalyzer:
                     "score": str(article.score or 0),
                     "url": article.url or "",
                     "content": content,
-                }
+                },
             )
 
-            raw: AIMessage = result["raw"]
-            parsed: _RawAnalysis = result["parsed"]
+            raw = cast("AIMessage", result["raw"])
+            parsed = cast("_RawAnalysis", result["parsed"])
 
             # 追蹤用量
-            usage = raw.usage_metadata or {}
-            in_tokens = usage.get("input_tokens", 0)
-            out_tokens = usage.get("output_tokens", 0)
+            usage = cast("dict[str, Any]", raw.usage_metadata or {})
+            in_tokens = int(usage.get("input_tokens", 0))
+            out_tokens = int(usage.get("output_tokens", 0))
             self.total_tokens += in_tokens + out_tokens
             self.total_cost_usd += in_tokens * _INPUT_TOKEN_COST + out_tokens * _OUTPUT_TOKEN_COST
             self.calls += 1
@@ -158,5 +168,5 @@ class ArticleAnalyzer:
                 key_insights=parsed.key_insights,
             )
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None

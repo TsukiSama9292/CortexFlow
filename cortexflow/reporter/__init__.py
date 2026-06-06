@@ -1,1 +1,1 @@
-"""Stage 5: 彙整輸出層 — Markdown / JSON 報告產生。"""
+"""Stage 5: 彙整輸出層 — Markdown / JSON 報告產生。."""

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 
 from cortexflow.core.pipeline import Pipeline, StageResult
@@ -40,7 +38,7 @@ async def test_pipeline_stage_results():
     assert "synthesize" in result.stage_stats
     assert "report" in result.stage_stats
 
-    for name, stats in result.stage_stats.items():
+    for _name, stats in result.stage_stats.items():
         assert stats["success"] is True
         assert isinstance(stats["duration_seconds"], float)
 
@@ -71,7 +69,7 @@ class TestStageResult:
 
     def test_stage_result_with_error(self):
         sr = StageResult(
-            stage_name="test", success=False, duration=2.0, error="fail"
+            stage_name="test", success=False, duration=2.0, error="fail",
         )
         assert sr.error == "fail"
 

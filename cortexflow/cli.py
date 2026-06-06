@@ -1,4 +1,4 @@
-"""CortexFlow CLI — 情報 ETL Pipeline 命令列入口。"""
+"""CortexFlow CLI — 情報 ETL Pipeline 命令列入口。."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from cortexflow.core.schema import PipelineInput
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """解析命令列參數。."""
     parser = argparse.ArgumentParser(
         prog="cortexflow",
         description="情報 ETL Pipeline — 從社群媒體與開發平台採集結構化情報",
@@ -74,7 +75,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _interactive_prompt(console: Console) -> argparse.Namespace:
-    """互動式引導模式 — 逐步詢問使用者輸入。"""
+    """互動式引導模式 — 逐步詢問使用者輸入。."""
     console.print()
     console.rule("[bold]🖐️ 歡迎使用 CortexFlow — 情報 ETL Pipeline[/bold]")
     console.print()
@@ -105,7 +106,7 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
 
 
 def _check_environment(console: Console) -> bool:
-    """執行前環境檢查，回傳是否為健康狀態。"""
+    """執行前環境檢查，回傳是否為健康狀態。."""
     ok = True
     try:
         import cortexflow  # noqa: F401
@@ -121,13 +122,13 @@ def _check_environment(console: Console) -> bool:
         console.print("  [yellow]⚠ 未設定 OPENAI_API_KEY[/yellow] — LLM 分析階段將跳過")
         console.print(
             "    [dim]💡 建議: 在 .env 檔案中設定"
-            " OPENAI_API_KEY，或使用 [bold]--demo[/bold] 模式測試[/dim]"
+            " OPENAI_API_KEY，或使用 [bold]--demo[/bold] 模式測試[/dim]",
         )
     else:
         model = settings.openai_model or "gpt-4o-mini"
         if not settings.openai_base_url:
             console.print(
-                "    [dim]💡 提示: 若使用 OpenAI 相容 API Proxy，請設定 OPENAI_BASE_URL[/dim]"
+                "    [dim]💡 提示: 若使用 OpenAI 相容 API Proxy，請設定 OPENAI_BASE_URL[/dim]",
             )
         console.print(f"  [green]✔ LLM[/green] — {model}")
 
@@ -149,6 +150,7 @@ def _check_environment(console: Console) -> bool:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CortexFlow 入口函式。."""
     console = Console()
 
     show_help = "--help" in sys.argv or "-h" in sys.argv
@@ -178,7 +180,7 @@ def main(argv: list[str] | None = None) -> None:
 
     console.print(
         f"  [bold green]完成[/bold green] — 輸出: [cyan]{result.input.output_path}[/cyan]"
-        f"  ({len(result.articles)} 篇文章)"
+        f"  ({len(result.articles)} 篇文章)",
     )
 
 

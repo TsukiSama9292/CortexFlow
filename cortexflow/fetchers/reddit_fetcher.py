@@ -1,4 +1,4 @@
-"""Reddit 資料採集器。
+"""Reddit 資料採集器。.
 
 策略（依序嘗試）：
 1. Reddit 公開 JSON API（不需要憑證）
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import random
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -56,29 +56,38 @@ _DEMO_BODIES = [
 
 
 class RedditFetcher(BaseFetcher):
-    """Reddit 資料採集器 — 先試 API，失敗則回退到 Demo 模式。"""
+    """Reddit 資料採集器 — 先試 API，失敗則回退到 Demo 模式。."""
 
     BASE_URL = "https://www.reddit.com"
     OLD_REDDIT_URL = "https://old.reddit.com"
 
     async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
+        """從 Reddit 採集文章。.
+
+        Args:
+            topic: 研究主題。
+            max_results: 最大結果數。
+
+        Returns:
+            Article 列表。
+        """
         # 嘗試主要端點
         try:
             return await self._fetch_from_api(self.BASE_URL, topic, max_results)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         # 備援：old.reddit.com
         try:
             return await self._fetch_from_api(self.OLD_REDDIT_URL, topic, max_results)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         # 最終備援：Demo 模式
         return self._fetch_demo(topic, max_results)
 
     async def _fetch_from_api(self, base_url: str, topic: str, max_results: int) -> list[Article]:
-        """從指定 Reddit 端點採集資料。"""
+        """從指定 Reddit 端點採集資料。."""
         url = f"{base_url}/search.json"
         params = {
             "q": topic,
@@ -114,21 +123,23 @@ class RedditFetcher(BaseFetcher):
                     author=raw.get("author", ""),
                     url=f"https://www.reddit.com{raw.get('permalink', '')}",
                     score=raw.get("score", 0),
-                    created_at=datetime.fromtimestamp(created) if created else None,
-                )
+                    created_at=datetime.fromtimestamp(created, tz=UTC)
+                    if created
+                    else None,
+                ),
             )
 
         return articles
 
     def _fetch_demo(self, topic: str, max_results: int) -> list[Article]:
-        """無需 API 金鑰，產生與主題相關的模擬 Reddit 貼文。"""
-        rng = random.Random(topic)
+        """無需 API 金鑰，產生與主題相關的模擬 Reddit 貼文。."""
+        rng = random.Random(topic)  # noqa: S311
         count = min(max_results, 12)
 
         articles: list[Article] = []
-        now = datetime.now()
+        now = datetime.now(tz=UTC)
 
-        for i in range(count):
+        for _i in range(count):
             title = rng.choice(_DEMO_TITLES).format(topic=topic)
             body = rng.choice(_DEMO_BODIES)
             subreddit = rng.choice(_DEMO_SUBREDDITS)
@@ -136,7 +147,7 @@ class RedditFetcher(BaseFetcher):
             minutes_ago = rng.randint(30, 60 * 24 * 7)
             score = rng.randint(10, 2000)
 
-            uid = f"reddit-demo-{hashlib.md5(title.encode()).hexdigest()[:12]}"
+            uid = f"reddit-demo-{hashlib.md5(title.encode()).hexdigest()[:12]}"  # noqa: S324
             permalink = f"/{subreddit}/comments/{uid}/{title.lower().replace(' ', '_')}/"
 
             articles.append(
@@ -150,7 +161,7 @@ class RedditFetcher(BaseFetcher):
                     url=f"https://www.reddit.com{permalink}",
                     score=score,
                     created_at=now - timedelta(minutes=minutes_ago),
-                )
+                ),
             )
 
         return articles

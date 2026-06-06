@@ -1,4 +1,4 @@
-"""Markdown Reporter — 將情報結果輸出為結構化 Markdown 報告。
+"""Markdown Reporter — 將情報結果輸出為結構化 Markdown 報告。.
 
 支援兩種模式：
 1. 豐富報告模式（有 synthesis）：LLM 合成的分析報告，類似科技分析媒體風格
@@ -7,18 +7,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from cortexflow.core.schema import Article, PipelineInput, ReportContent
-
 if TYPE_CHECKING:
     from cortexflow.core.pipeline import StageResult
+    from cortexflow.core.schema import Article, PipelineInput, ReportContent
 
 
 class MarkdownReporter:
-    """以 Markdown 格式輸出情報報告。"""
+    """以 Markdown 格式輸出情報報告。."""
 
     TEXT_TRUNCATE_CHARS: int = 500
 
@@ -27,10 +26,10 @@ class MarkdownReporter:
         articles: list[Article],
         inp: PipelineInput,
         stage_results: list[StageResult],
-        errors: list[dict],
+        errors: list[dict[str, str]],
         report_content: ReportContent | None = None,
     ) -> None:
-        """產生 Markdown 報告並寫入 inp.output_path。"""
+        """產生 Markdown 報告並寫入 inp.output_path。."""
         if report_content:
             report = self._build_rich(report_content)
         else:
@@ -90,7 +89,7 @@ class MarkdownReporter:
         lines.append("")
         lines.append(
             "*這篇報告由 AI 從多方資料源協助整理與編輯，方便閱讀與討論；"
-            "若想看完整脈絡、原始說法與更多細節，仍建議以原文內容為主。*"
+            "若想看完整脈絡、原始說法與更多細節，仍建議以原文內容為主。*",
         )
         lines.append("")
 
@@ -105,7 +104,7 @@ class MarkdownReporter:
         articles: list[Article],
         inp: PipelineInput,
         stage_results: list[StageResult],
-        errors: list[dict],
+        errors: list[dict[str, str]],
     ) -> str:
         lines: list[str] = []
 
@@ -118,7 +117,8 @@ class MarkdownReporter:
         lines.append("")
         lines.append(f"- **主題**: {inp.topic}")
         lines.append(f"- **來源渠道**: {', '.join(inp.sources)}")
-        lines.append(f"- **報告產生時間**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        now_str = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        lines.append(f"- **報告產生時間**: {now_str} (UTC)")
         lines.append(f"- **文章總數**: {len(articles)}")
         lines.append("")
 
@@ -132,7 +132,7 @@ class MarkdownReporter:
             error_suffix = f" ({sr.error})" if sr.error else ""
             lines.append(
                 f"| {sr.stage_name} | {status}{error_suffix}"
-                f" | {sr.duration:.2f} | {sr.items_count} |"
+                f" | {sr.duration:.2f} | {sr.items_count} |",
             )
         lines.append("")
 
@@ -157,7 +157,7 @@ class MarkdownReporter:
                 lines.append(f"- **連結**: {article.url}")
                 if article.created_at:
                     lines.append(
-                        f"- **發佈時間**: {article.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+                        f"- **發佈時間**: {article.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
                     )
                 if article.relevance_score is not None:
                     lines.append(f"- **相關性分數**: {article.relevance_score:.2f}")
