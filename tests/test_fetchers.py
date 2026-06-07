@@ -129,6 +129,15 @@ async def test_hn_fetcher_success(httpx_mock: HTTPXMock) -> None:
 
 
 @pytest.mark.asyncio
+async def test_hn_fetcher_error(httpx_mock: HTTPXMock) -> None:
+    """測試 Hacker News API 失敗。"""
+    httpx_mock.add_response(status_code=500)
+    fetcher = HackerNewsFetcher()
+    articles = await fetcher.fetch("test")
+    assert articles == []
+
+
+@pytest.mark.asyncio
 async def test_lobsters_fetcher_success(httpx_mock: HTTPXMock) -> None:
     """測試 Lobsters Fetcher。"""
     mock_response = [
@@ -149,3 +158,23 @@ async def test_lobsters_fetcher_success(httpx_mock: HTTPXMock) -> None:
     assert len(articles) == 1
     assert articles[0].source == "lobsters"
     assert "Test" in articles[0].title
+
+
+@pytest.mark.asyncio
+async def test_lobsters_fetcher_error(httpx_mock: HTTPXMock) -> None:
+    """測試 Lobsters API 失敗。"""
+    httpx_mock.add_response(status_code=404)
+    fetcher = LobstersFetcher()
+    articles = await fetcher.fetch("test")
+    assert articles == []
+
+
+@pytest.mark.asyncio
+async def test_github_fetcher_trending_error(httpx_mock: HTTPXMock) -> None:
+    """測試 GitHub Trending 頁面請求失敗。"""
+    from cortexflow.core.errors import FetchError
+
+    httpx_mock.add_response(status_code=503)
+    fetcher = GitHubFetcher()
+    with pytest.raises(FetchError):
+        await fetcher.fetch("test")
