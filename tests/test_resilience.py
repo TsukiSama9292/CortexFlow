@@ -64,7 +64,11 @@ def test_fallback_analyzer() -> None:
 @pytest.mark.asyncio
 async def test_article_analyzer_retry(monkeypatch: pytest.MonkeyPatch) -> None:
     """測試 ArticleAnalyzer 的重試機制。"""
+    from cortexflow.config.settings import settings
     from cortexflow.filter.article_analyzer import ArticleAnalyzer
+
+    # 注入假 Key，防止 LangChain 在初始化時報錯
+    monkeypatch.setattr(settings, "openai_api_key", "sk-fake-key-for-testing")
 
     analyzer = ArticleAnalyzer(topic="test")
 
