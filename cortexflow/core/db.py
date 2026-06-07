@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from cortexflow.core.schema import PipelineInput, PipelineOutput
+if TYPE_CHECKING:
+    from cortexflow.core.schema import PipelineOutput
 
 
 class Database:
@@ -39,22 +39,30 @@ class Database:
                     total_tokens INTEGER DEFAULT 0,
                     demo INTEGER DEFAULT 0
                 )
-                """
+                """,
             )
             conn.commit()
 
-    def save_execution(self, output: PipelineOutput, status: str = "success", demo: bool = False) -> int:
+    def save_execution(
+        self,
+        output: PipelineOutput,
+        status: str = "success",
+        *,
+        demo: bool = False,
+    ) -> int:
         """儲存一次 Pipeline 執行結果。."""
         # 計算總耗時
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
-        
+
+        sql = """
+            INSERT INTO executions (
+                topic, timestamp, input_json, output_json, status,
+                duration_seconds, total_tokens, demo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
         with self._get_connection() as conn:
             cursor = conn.execute(
-                """
-                INSERT INTO executions (
-                    topic, timestamp, input_json, output_json, status, duration_seconds, total_tokens, demo
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                sql,
                 (
                     output.input.topic,
                     datetime.now(UTC).isoformat(),

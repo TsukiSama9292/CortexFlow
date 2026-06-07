@@ -9,11 +9,10 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
 import httpx
 import trafilatura
 from bs4 import BeautifulSoup
+from loguru import logger
 from rich.console import Console
 
 from cortexflow.config.settings import settings
@@ -45,7 +44,11 @@ class FastExtractor:
                     if article.extracted_html:
                         logger.debug("提取成功: {title}", title=article.title[:40])
                 except Exception as exc:  # noqa: BLE001
-                    logger.warning("提取失敗 ({title}): {error}", title=article.title[:30], error=exc)
+                    logger.warning(
+                        "提取失敗 ({title}): {error}",
+                        title=article.title[:30],
+                        error=exc,
+                    )
                     article.extracted_html = None
 
         await asyncio.gather(*[_extract_one(a) for a in to_extract])

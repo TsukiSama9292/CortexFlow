@@ -40,7 +40,7 @@ async def test_pipeline_stage_results():
 
     for _name, stats in result.stage_stats.items():
         assert stats["success"] is True
-        assert isinstance(stats["duration_seconds"], float)
+        assert isinstance(stats["duration"], float)
 
 
 @pytest.mark.asyncio

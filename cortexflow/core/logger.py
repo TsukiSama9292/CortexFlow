@@ -8,19 +8,14 @@ from pathlib import Path
 from loguru import logger
 
 
-def setup_logger(verbose: bool = False, log_file: str | None = None) -> None:
-    """配置 loguru 日誌。
-
-    Args:
-        verbose: 是否啟用 DEBUG 層級日誌。
-        log_file: 日誌檔案輸出路徑。
-    """
+def setup_logger(*, verbose: bool = False, log_file: str | None = None) -> None:
+    """配置 loguru 日誌。."""
     # 移除預設處理器
     logger.remove()
 
     # 配置標準輸出（僅顯示重要資訊，除非 verbose）
     level = "DEBUG" if verbose else "INFO"
-    
+
     # 控制台輸出格式
     console_format = (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
@@ -40,11 +35,15 @@ def setup_logger(verbose: bool = False, log_file: str | None = None) -> None:
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
+        file_format = (
+            "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}"
+        )
+
         logger.add(
             log_file,
             level="DEBUG",  # 檔案日誌一律記錄 DEBUG 以上
-            format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+            format=file_format,
             rotation="10 MB",
             retention="1 week",
             compression="zip",

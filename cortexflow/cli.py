@@ -243,7 +243,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         _check_environment(console)
 
-    sources = cast(list[Literal["reddit", "github"]], args.sources or ["reddit", "github"])
+    sources = cast("list[Literal['reddit', 'github']]", args.sources or ["reddit", "github"])
 
     pipeline_input = PipelineInput(
         topic=args.topic,
@@ -261,7 +261,6 @@ def main(argv: list[str] | None = None) -> None:
         f"  [bold green]完成[/bold green] — 輸出: [cyan]{result.input.output_path}[/cyan]"
         f"  ({len(result.articles)} 篇文章)",
     )
-
 
 
 if __name__ == "__main__":

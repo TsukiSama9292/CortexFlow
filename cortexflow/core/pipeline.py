@@ -137,7 +137,7 @@ class Pipeline:
         try:
             exec_id = self.db.save_execution(output, demo=self.demo)
             logger.debug("執行記錄已儲存 (ID: {id})", id=exec_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("無法儲存執行記錄: {error}", error=e)
 
         return output

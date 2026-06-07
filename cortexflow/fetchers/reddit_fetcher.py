@@ -70,7 +70,7 @@ class RedditFetcher(BaseFetcher):
             articles = await self._fetch_from_api(self.BASE_URL, topic, max_results)
             logger.info("Reddit API 採集成功: {count} 篇文章", count=len(articles))
             return articles
-        except Exception as e:  # noqa: BLE001, S110
+        except Exception as e:  # noqa: BLE001
             logger.debug("Reddit 主要 API 端點失敗: {error}", error=e)
 
         # 備援：old.reddit.com
@@ -78,7 +78,7 @@ class RedditFetcher(BaseFetcher):
             articles = await self._fetch_from_api(self.OLD_REDDIT_URL, topic, max_results)
             logger.info("Reddit Old API 採集成功: {count} 篇文章", count=len(articles))
             return articles
-        except Exception as e:  # noqa: BLE001, S110
+        except Exception as e:  # noqa: BLE001
             logger.debug("Reddit 備援 API 端點失敗: {error}", error=e)
 
         # 最終備援：Demo 模式
@@ -122,9 +122,7 @@ class RedditFetcher(BaseFetcher):
                     author=raw.get("author", ""),
                     url=f"https://www.reddit.com{raw.get('permalink', '')}",
                     score=raw.get("score", 0),
-                    created_at=datetime.fromtimestamp(created, tz=UTC)
-                    if created
-                    else None,
+                    created_at=datetime.fromtimestamp(created, tz=UTC) if created else None,
                 ),
             )
 
