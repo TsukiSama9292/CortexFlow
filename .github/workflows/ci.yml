@@ -29,15 +29,22 @@ jobs:
       - name: Setup Python
         run: uv python install 3.11
 
-      - name: Install Python dependencies (Decentralized)
+      - name: Install Python dependencies
         run: |
-          for dir in packages/core apps/api apps/worker; do
+          for dir in packages/core apps/api apps/cli apps/worker; do
             echo "Installing dependencies in $dir..."
             (cd $dir && uv sync)
           done
 
       - name: Lint (Turbo)
         run: npm run lint
+
+      - name: Format Check (ruff)
+        run: |
+          for dir in packages/core apps/api apps/cli apps/worker; do
+            echo "Checking formatting in $dir..."
+            (cd $dir && uv run ruff format --check .)
+          done
 
       - name: Type Check (Turbo)
         run: npm run type-check
