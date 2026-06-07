@@ -1,5 +1,4 @@
 repos:
-  # ── 第一道防線：Ruff (格式化與靜態檢查) ──
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
     hooks:
@@ -7,20 +6,23 @@ repos:
         args: [ --fix ]
       - id: ruff-format
 
-  # ── 第二道與第三道防線：Pyright & Pytest (型態與邏輯) ──
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v0.6.0
+    hooks:
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome@1.9.4"]
+
   - repo: local
     hooks:
-      - id: pyright
-        name: pyright
-        entry: uv run pyright
+      - id: turbo-type-check
+        name: turbo-type-check
+        entry: npm run type-check
         language: system
-        types: [python]
         pass_filenames: false
 
-      - id: pytest
-        name: pytest
-        entry: uv run pytest
+      - id: turbo-test
+        name: turbo-test
+        entry: npm run test
         language: system
-        types: [python]
         pass_filenames: false
-        stages: [commit]
+        stages: [manual, push] # 測試通常較慢，可改為只在 push 或手動時執行，或保留在 commit

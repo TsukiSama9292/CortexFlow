@@ -1,8 +1,27 @@
-.codegraph/
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 .venv/
 *.egg-info/
+.pytest_cache/
+.ruff_cache/
+.pyright_cache/
+
+# Node / JS
+node_modules/
+dist/
+.next/
+out/
+.turbo/
+*.log
+
+# Project specific
 .env
+.env.local
 outputs/
+.codegraph/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+{
+  "name": "@cortexflow/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run python main.py",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "type-check": "uv run pyright",
+    "test": "uv run pytest"
+  }
+}

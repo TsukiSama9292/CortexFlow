@@ -110,8 +110,8 @@
 - [ ] **Helm Chart 雲端發佈**：支援 K8s 企業級集群部署。
 
 #### 3.3 商業數據基石 (ORM & Migration)
-- [ ] **SQLAlchemy ORM 遷移**：從 SQLite 升級至企業級 PostgreSQL。
 - [ ] **Alembic Migration**：建立嚴謹的資料庫遷移版本控制。
+- [ ] **SQLAlchemy ORM 遷移**：從 SQLite 升級至企業級 PostgreSQL。
 - [ ] **PostgreSQL 事務性任務佇列 (DB-as-a-Queue)**：
     - 利用 `FOR UPDATE SKIP LOCKED` 實作高效任務分發，移除 Redis 依賴。
     - 針對狀態與時間戳建立複合索引，並確保耗時操作位於事務外部。

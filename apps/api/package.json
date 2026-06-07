@@ -1,0 +1,12 @@
+{
+  "name": "@cortexflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn main:app --reload",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "type-check": "uv run pyright",
+    "test": "uv run pytest"
+  }
+}

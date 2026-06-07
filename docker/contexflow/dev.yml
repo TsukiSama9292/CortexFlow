@@ -1,0 +1,26 @@
+services:
+  db:
+    image: pgvector/pgvector:0.8.2-pg18-trixie
+    environment:
+      POSTGRES_DB: cortexflow
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  traefik:
+    image: traefik:v3.7.4
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+volumes:
+  db_data:

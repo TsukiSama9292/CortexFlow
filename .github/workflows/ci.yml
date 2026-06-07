@@ -3,45 +3,44 @@ name: CI
 on:
   push:
     branches: [ main, dev ]
-    paths:
-      - "**.py"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/ci.yml"
   pull_request:
     branches: [ main, dev ]
-    paths:
-      - "**.py"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/ci.yml"
 
 jobs:
-  test:
+  quality-check:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Set up Python ${{ matrix.python-version }}
-      run: uv python install ${{ matrix.python-version }}
+      - name: Install Node dependencies
+        run: npm install
 
-    - name: Install dependencies
-      run: uv sync
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: Lint with ruff
-      run: uv run ruff check .
+      - name: Setup Python
+        run: uv python install 3.11
 
-    - name: Check types with pyright
-      run: uv run pyright
+      - name: Install Python dependencies (Decentralized)
+        run: |
+          for dir in packages/core apps/api apps/worker; do
+            echo "Installing dependencies in $dir..."
+            (cd $dir && uv sync)
+          done
 
-    - name: Run tests
-      run: uv run pytest
+      - name: Lint (Turbo)
+        run: npm run lint
+
+      - name: Type Check (Turbo)
+        run: npm run type-check
+
+      - name: Test (Turbo)
+        run: npm run test

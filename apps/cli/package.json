@@ -1,0 +1,19 @@
+{
+  "name": "@cortexflow/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "cortexflow": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "biome check .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

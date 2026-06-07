@@ -1,0 +1,31 @@
+[project]
+name = "cortexflow-api"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "cortexflow-core",
+]
+
+[tool.uv.sources]
+cortexflow-core = { path = "../../packages/core", editable = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6.0",
+    "pyright>=1.1.300",
+    "pytest>=8.0",
+    "httpx>=0.27.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pyright]
+include = ["."]
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

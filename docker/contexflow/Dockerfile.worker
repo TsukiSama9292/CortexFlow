@@ -1,0 +1,27 @@
+FROM python:3.11-slim-bookworm AS builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app
+RUN pip install uv
+
+COPY packages/core ./packages/core
+COPY apps/worker ./apps/worker
+COPY pyproject.toml .
+COPY uv.lock .
+
+RUN uv sync --frozen --no-dev --package cortexflow-worker
+
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
+COPY apps/worker /app/apps/worker
+COPY packages/core /app/packages/core
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+CMD ["python", "-m", "apps.worker.main"]
