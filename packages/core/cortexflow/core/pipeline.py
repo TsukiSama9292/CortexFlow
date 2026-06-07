@@ -164,9 +164,9 @@ class Pipeline:
         # 最終更新資料庫
         try:
             if self.execution_id:
-                self.db.update_execution(self.execution_id, output, "success", last_stage="report")
+                await self.db.update_execution(self.execution_id, output, "success", last_stage="report")
             else:
-                self.execution_id = self.db.save_execution(
+                self.execution_id = await self.db.save_execution(
                     output, demo=self.demo, last_stage="report"
                 )
             logger.debug("執行記錄已完成並儲存 (ID: {id})", id=self.execution_id)
@@ -205,7 +205,7 @@ class Pipeline:
             console.print(f"  [green]✔[/green] {label} 完成  [dim]({elapsed:.2f}s)[/dim]")
 
             # 中間狀態存檔
-            self._save_intermediate_state("running")
+            await self._save_intermediate_state("running")
 
         except Exception as exc:  # noqa: BLE001
             elapsed = time.monotonic() - t0
@@ -225,7 +225,7 @@ class Pipeline:
             self.errors.append({"stage": name, "error": error_msg})
 
             # 失敗也存檔，狀態改為 failed
-            self._save_intermediate_state("failed")
+            await self._save_intermediate_state("failed")
 
         self.stage_results.append(result)
 
@@ -400,14 +400,19 @@ class Pipeline:
         if not self.execution_id:
             return
 
-        exec_data = self.db.get_execution(self.execution_id)
+        exec_data = await self.db.get_execution(self.execution_id)
         if not exec_data or not exec_data["output_json"]:
             return
 
         import json
 
         try:
-            output = PipelineOutput(**json.loads(exec_data["output_json"]))
+            # SQLAlchemy 返回的是 dict，input_json/output_json 可能是 dict 或 string
+            out_data = exec_data["output_json"]
+            if isinstance(out_data, str):
+                out_data = json.loads(out_data)
+
+            output = PipelineOutput(**out_data)
             self.articles = output.articles
             self.analyses = [
                 ArticleAnalysis(
@@ -440,19 +445,19 @@ class Pipeline:
         except Exception as e:  # noqa: BLE001
             logger.error("還原狀態失敗: {error}", error=e)
 
-    def _save_intermediate_state(self, status: str) -> None:
+    async def _save_intermediate_state(self, status: str) -> None:
         """儲存中間執行狀態到資料庫。."""
         output = self._build_output()
         try:
             if self.execution_id:
-                self.db.update_execution(
+                await self.db.update_execution(
                     self.execution_id,
                     output,
                     status,
                     last_stage=self.last_completed_stage,
                 )
             else:
-                self.execution_id = self.db.save_execution(
+                self.execution_id = await self.db.save_execution(
                     output,
                     status=status,
                     demo=self.demo,

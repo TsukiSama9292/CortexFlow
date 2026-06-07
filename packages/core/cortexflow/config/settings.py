@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # ─── GitHub ───
     github_token: str = ""
 
+    # ─── Database ───
+    database_url: str = "postgresql+asyncpg://user:password@localhost:5433/cortexflow"
+
     # ─── Pipeline ───
     relevance_threshold: int = 5
     max_results_per_source: int = 20

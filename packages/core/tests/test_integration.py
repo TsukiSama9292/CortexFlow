@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from cortexflow.core.db import Database
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import PipelineInput
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_integration_demo(tmp_path: Path) -> None:
+async def test_pipeline_integration_demo(tmp_path: Path, db: Database) -> None:
     """測試完整 Pipeline 在 Demo 模式下的端到端執行。"""
     output_path = tmp_path / "report.md"
     inp = PipelineInput(
@@ -23,6 +24,7 @@ async def test_pipeline_integration_demo(tmp_path: Path) -> None:
     )
 
     pipeline = Pipeline(inp, demo=True)
+    pipeline.db = db  # 注入測試資料庫
     result = await pipeline.run()
 
     # 驗證執行結果
@@ -38,7 +40,7 @@ async def test_pipeline_integration_demo(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_integration_json(tmp_path: Path) -> None:
+async def test_pipeline_integration_json(tmp_path: Path, db: Database) -> None:
     """測試完整 Pipeline 在 Demo 模式下輸出 JSON。"""
     output_path = tmp_path / "report.json"
     inp = PipelineInput(
@@ -50,6 +52,7 @@ async def test_pipeline_integration_json(tmp_path: Path) -> None:
     )
 
     pipeline = Pipeline(inp, demo=True)
+    pipeline.db = db  # 注入測試資料庫
     result = await pipeline.run()
 
     assert output_path.exists()

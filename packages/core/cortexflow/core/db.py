@@ -1,50 +1,34 @@
-"""CortexFlow 資料庫模組 — 負責執行記錄持久化。."""
+"""CortexFlow 資料庫模組 — 基於 SQLAlchemy ORM 與 PostgreSQL。"""
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from cortexflow.config.settings import settings
+from cortexflow.core.models import Execution
 
 if TYPE_CHECKING:
     from cortexflow.core.schema import PipelineOutput
 
 
 class Database:
-    """SQLite 資料庫管理類，儲存執行歷史。."""
+    """SQLAlchemy 資料庫管理類，負責執行紀錄持久化。"""
 
-    def __init__(self, db_path: str = "outputs/history.db") -> None:
-        """初始化資料庫並建立資料表。."""
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._init_db()
+    def __init__(self, database_url: str | None = None) -> None:
+        """初始化異步引擎與 Session 工廠。"""
+        url = database_url or settings.database_url
+        self.engine = create_async_engine(url, pool_pre_ping=True)
+        self.SessionLocal = async_sessionmaker(
+            bind=self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
-    def _get_connection(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path)
-
-    def _init_db(self) -> None:
-        """建立必要的資料表。."""
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS executions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    topic TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    input_json TEXT NOT NULL,
-                    output_json TEXT,
-                    status TEXT,
-                    duration_seconds REAL,
-                    total_tokens INTEGER DEFAULT 0,
-                    demo INTEGER DEFAULT 0,
-                    last_completed_stage TEXT
-                )
-                """,
-            )
-            conn.commit()
-
-    def save_execution(
+    async def save_execution(
         self,
         output: PipelineOutput,
         status: str = "success",
@@ -52,34 +36,27 @@ class Database:
         demo: bool = False,
         last_stage: str | None = None,
     ) -> int:
-        """儲存或更新一次 Pipeline 執行結果。."""
-        # 計算總耗時
+        """儲存一次 Pipeline 執行結果。"""
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
 
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO executions (
-                    topic, timestamp, input_json, output_json, status,
-                    duration_seconds, total_tokens, demo, last_completed_stage
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    output.input.topic,
-                    datetime.now(UTC).isoformat(),
-                    output.input.model_dump_json(),
-                    output.model_dump_json(),
-                    status,
-                    duration,
-                    output.llm_usage.get("total_tokens", 0),
-                    1 if demo else 0,
-                    last_stage,
-                ),
+        async with self.SessionLocal() as session:
+            execution = Execution(
+                topic=output.input.topic,
+                timestamp=datetime.now(UTC),
+                input_json=output.input.model_dump(mode="json"),
+                output_json=output.model_dump(mode="json"),
+                status=status,
+                duration_seconds=duration,
+                total_tokens=output.llm_usage.get("total_tokens", 0),
+                demo=1 if demo else 0,
+                last_completed_stage=last_stage,
             )
-            conn.commit()
-            return cursor.lastrowid or 0
+            session.add(execution)
+            await session.commit()
+            await session.refresh(execution)
+            return execution.id
 
-    def update_execution(
+    async def update_execution(
         self,
         execution_id: int,
         output: PipelineOutput,
@@ -87,47 +64,64 @@ class Database:
         *,
         last_stage: str | None = None,
     ) -> None:
-        """更新現有的執行記錄。."""
+        """更新現有的執行記錄。"""
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
 
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                UPDATE executions SET
-                    output_json = ?,
-                    status = ?,
-                    duration_seconds = ?,
-                    total_tokens = ?,
-                    last_completed_stage = ?
-                WHERE id = ?
-                """,
-                (
-                    output.model_dump_json(),
-                    status,
-                    duration,
-                    output.llm_usage.get("total_tokens", 0),
-                    last_stage,
-                    execution_id,
-                ),
+        async with self.SessionLocal() as session:
+            stmt = (
+                update(Execution)
+                .where(Execution.id == execution_id)
+                .values(
+                    output_json=output.model_dump(mode="json"),
+                    status=status,
+                    duration_seconds=duration,
+                    total_tokens=output.llm_usage.get("total_tokens", 0),
+                    last_completed_stage=last_stage,
+                )
             )
-            conn.commit()
+            await session.execute(stmt)
+            await session.commit()
 
-    def get_history(self, limit: int = 10) -> list[dict[str, Any]]:
-        """取得最近的執行記錄。."""
-        with self._get_connection() as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                "SELECT id, topic, timestamp, status, duration_seconds, "
-                "total_tokens, last_completed_stage "
-                "FROM executions ORDER BY timestamp DESC LIMIT ?",
-                (limit,),
-            )
-            return [dict(row) for row in cursor.fetchall()]
+    async def get_history(self, limit: int = 10) -> list[dict[str, Any]]:
+        """取得最近的執行記錄。"""
+        async with self.SessionLocal() as session:
+            stmt = select(Execution).order_by(Execution.timestamp.desc()).limit(limit)
+            result = await session.execute(stmt)
+            executions = result.scalars().all()
+            return [
+                {
+                    "id": e.id,
+                    "topic": e.topic,
+                    "timestamp": e.timestamp.isoformat(),
+                    "status": e.status,
+                    "duration_seconds": e.duration_seconds,
+                    "total_tokens": e.total_tokens,
+                    "last_completed_stage": e.last_completed_stage,
+                }
+                for e in executions
+            ]
 
-    def get_execution(self, execution_id: int) -> dict[str, Any] | None:
-        """取得特定執行記錄的完整資料。."""
-        with self._get_connection() as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute("SELECT * FROM executions WHERE id = ?", (execution_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
+    async def get_execution(self, execution_id: int) -> dict[str, Any] | None:
+        """取得特定執行記錄的完整資料。"""
+        async with self.SessionLocal() as session:
+            stmt = select(Execution).where(Execution.id == execution_id)
+            result = await session.execute(stmt)
+            e = result.scalar_one_or_none()
+            if not e:
+                return None
+            return {
+                "id": e.id,
+                "topic": e.topic,
+                "timestamp": e.timestamp.isoformat(),
+                "input_json": e.input_json,
+                "output_json": e.output_json,
+                "status": e.status,
+                "duration_seconds": e.duration_seconds,
+                "total_tokens": e.total_tokens,
+                "demo": bool(e.demo),
+                "last_completed_stage": e.last_completed_stage,
+            }
+
+    async def close(self) -> None:
+        """關閉資料庫引擎。"""
+        await self.engine.dispose()

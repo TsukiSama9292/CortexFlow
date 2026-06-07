@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
+from cortexflow.core.db import Database
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import Article, PipelineInput, PipelineOutput
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 @pytest.mark.asyncio
-async def test_pipeline_resume(tmp_path: Path) -> None:
+async def test_pipeline_resume(db: Database) -> None:
     """測試 Pipeline 續傳功能。"""
-    db_file = tmp_path / "resume.db"
-
     # 1. 模擬一個執行到一半失敗的記錄
     inp = PipelineInput(topic="resume test", sources=["reddit"])
     output = PipelineOutput(
@@ -28,14 +22,11 @@ async def test_pipeline_resume(tmp_path: Path) -> None:
         },
     )
 
-    from cortexflow.core.db import Database
-
-    db = Database(str(db_file))
-    exec_id = db.save_execution(output, status="failed", last_stage="normalize")
+    exec_id = await db.save_execution(output, status="failed", last_stage="normalize")
 
     # 2. 建立續傳 Pipeline
     pipeline = Pipeline(inp, demo=True, execution_id=exec_id)
-    pipeline.db = db  # 使用測試資料庫
+    pipeline.db = db  # 注入測試資料庫
 
     # 3. 執行 Pipeline
     await pipeline.run()
