@@ -11,6 +11,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     """SQLAlchemy 基底類別。."""
+
     type_annotation_map = {
         dict[str, Any]: JSON,
     }
@@ -57,4 +58,3 @@ class Task(Base):
     worker_id: Mapped[str | None] = mapped_column(String, nullable=True)
     retries: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
-

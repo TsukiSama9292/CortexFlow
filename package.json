@@ -1,22 +1,19 @@
 {
-  "name": "cortexflow-monorepo",
-  "private": true,
-  "packageManager": "npm@10.2.4",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "init": "docker compose -f docker/contexflow/dev.yml up -d",
-    "dev": "npm run init && turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "type-check": "turbo run type-check",
-    "test": "turbo run test",
-    "docker:build": "docker compose -f docker/contexflow/docker-compose.yml build --no-cache",
-    "docker:push": "docker compose -f docker/contexflow/docker-compose.yml push"
-  },
-  "devDependencies": {
-    "turbo": "latest"
-  }
+	"name": "cortexflow-monorepo",
+	"private": true,
+	"packageManager": "npm@10.2.4",
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"init": "docker compose -f docker/contexflow/dev.yml up -d",
+		"dev": "npm run init && turbo run dev",
+		"build": "turbo run build",
+		"lint": "turbo run lint",
+		"type-check": "turbo run type-check",
+		"test": "turbo run test",
+		"docker:build": "docker compose -f docker/contexflow/docker-compose.yml build --no-cache",
+		"docker:push": "docker compose -f docker/contexflow/docker-compose.yml push"
+	},
+	"devDependencies": {
+		"turbo": "latest"
+	}
 }

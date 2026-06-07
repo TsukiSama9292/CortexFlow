@@ -193,4 +193,3 @@ class Database:
             stmt = update(Task).where(Task.id == task_id).values(**values)
             await session.execute(stmt)
             await session.commit()
-

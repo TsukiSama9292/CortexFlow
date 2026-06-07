@@ -91,17 +91,19 @@ class Synthesizer:
         # Step 1: Map (併發處理各批次)
         tasks = [self._partial_reduce(batch) for batch in batches]
         partial_results = await asyncio.gather(*tasks)
+        # pyright: ignore[reportUnknownArgumentType]
         partial_results = [r for r in partial_results if r is not None]
 
         if not partial_results:
             return None
 
         # Step 2: Final Reduce (彙整中間結果)
+        # pyright: ignore[reportUnknownArgumentType]
         return await self._reduce_partials(partial_results)
 
     async def _partial_reduce(self, analyses: list[ArticleAnalysis]) -> PartialAnalysis | None:
         """將一小批次的文章轉換為中間分析結果。."""
-        prompt = ChatPromptTemplate.from_messages(
+        prompt: ChatPromptTemplate = ChatPromptTemplate.from_messages(  # pyright: ignore[reportUnknownMemberType]
             [
                 (
                     "system",
@@ -114,15 +116,17 @@ class Synthesizer:
                 ),
             ]
         )
-        chain = prompt | self.llm.with_structured_output(PartialAnalysis, include_raw=True)
+        chain = prompt | self.llm.with_structured_output(  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            PartialAnalysis, include_raw=True
+        )
         text = self._format_analyses(analyses)
 
-        result = await self._invoke_chain(chain, {"topic": self.topic, "text": text})
-        return cast("PartialAnalysis", result) if result else None
+        result = await self._invoke_chain(chain, {"topic": self.topic, "text": text})  # pyright: ignore[reportUnknownArgumentType]
+        return cast(PartialAnalysis, result) if result else None
 
     async def _reduce_partials(self, partials: list[PartialAnalysis]) -> ReportContent | None:
         """彙整多個中間分析結果為最終 ReportContent。."""
-        prompt = ChatPromptTemplate.from_messages(
+        prompt: ChatPromptTemplate = ChatPromptTemplate.from_messages(  # pyright: ignore[reportUnknownMemberType]
             [
                 (
                     "system",
@@ -136,9 +140,11 @@ class Synthesizer:
                 ),
             ]
         )
-        chain = prompt | self.llm.with_structured_output(ReportContent, include_raw=True)
+        chain = prompt | self.llm.with_structured_output(  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            ReportContent, include_raw=True
+        )
 
-        text_parts = []
+        text_parts: list[str] = []
         for i, p in enumerate(partials, 1):
             batch_text = (
                 f"[批次 {i}] {p.title}\n"
@@ -146,15 +152,15 @@ class Synthesizer:
                 f"內容：{p.summary}\n"
                 f"連結：{', '.join(p.links)}"
             )
-            text_parts.append(batch_text)
-        text = "\n---\n".join(text_parts)
+            text_parts.append(batch_text)  # pyright: ignore[reportUnknownMemberType]
+        text = "\n---\n".join(text_parts)  # pyright: ignore[reportUnknownArgumentType]
 
-        result = await self._invoke_chain(chain, {"topic": self.topic, "text": text})
+        result = await self._invoke_chain(chain, {"topic": self.topic, "text": text})  # pyright: ignore[reportUnknownArgumentType]
         return cast("ReportContent", result) if result else None
 
     async def _final_reduce(self, analyses: list[ArticleAnalysis]) -> ReportContent | None:
         """原有的單次合成邏輯。."""
-        prompt = ChatPromptTemplate.from_messages(
+        prompt: ChatPromptTemplate = ChatPromptTemplate.from_messages(  # pyright: ignore[reportUnknownMemberType]
             [
                 (
                     "system",
@@ -186,10 +192,12 @@ class Synthesizer:
                 ),
             ],
         )
-        chain = prompt | self.llm.with_structured_output(ReportContent, include_raw=True)
+        chain = prompt | self.llm.with_structured_output(  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            ReportContent, include_raw=True
+        )
         text = self._format_analyses(analyses)
 
-        result = await self._invoke_chain(chain, {"topic": self.topic, "analyses_text": text})
+        result = await self._invoke_chain(chain, {"topic": self.topic, "analyses_text": text})  # pyright: ignore[reportUnknownArgumentType]
         return cast("ReportContent", result) if result else None
 
     async def _invoke_chain(
@@ -213,13 +221,11 @@ class Synthesizer:
             raw = cast("AIMessage", res["raw"])
             parsed = res["parsed"]
 
-            usage = cast("dict[str, Any]", raw.usage_metadata or {})
+            usage = cast(dict[str, Any], raw.usage_metadata or {})
             in_tokens = int(usage.get("input_tokens", 0))
             out_tokens = int(usage.get("output_tokens", 0))
             self.total_tokens += in_tokens + out_tokens
-            self.total_cost_usd += (
-                in_tokens * _INPUT_TOKEN_COST + out_tokens * _OUTPUT_TOKEN_COST
-            )
+            self.total_cost_usd += in_tokens * _INPUT_TOKEN_COST + out_tokens * _OUTPUT_TOKEN_COST
             self.calls += 1
 
             return parsed

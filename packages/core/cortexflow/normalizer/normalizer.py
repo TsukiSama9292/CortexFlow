@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from datasketch import MinHash, MinHashLSH
+from datasketch import MinHash, MinHashLSH  # type: ignore[import-untyped]
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -57,15 +57,14 @@ class Normalizer:
             m = self._get_minhash(text)
 
             # 查詢 LSH 是否存在相似內容
-            result = lsh.query(m)
+            result = lsh.query(m)  # type: ignore[reportUnknownMemberType]
             if result:
                 logger.debug("發現重複文章 (LSH): {title}", title=article.title)
                 continue
 
             # 插入 LSH 以供後續比對
-            lsh.insert(article.id, m)
+            lsh.insert(article.id, m)  # type: ignore[reportUnknownMemberType]
             unique.append(article)
-
         logger.info("去重完成: 原有 {old} 篇，剩餘 {new} 篇", old=len(articles), new=len(unique))
         return unique
 
@@ -81,5 +80,5 @@ class Normalizer:
         shingles = [text[i : i + 3] for i in range(len(text) - 2)]
 
         for s in set(shingles):
-            m.update(s.encode("utf8"))
+            m.update(s.encode("utf8"))  # type: ignore[reportUnknownMemberType]
         return m

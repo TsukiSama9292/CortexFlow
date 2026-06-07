@@ -15,7 +15,7 @@ from loguru import logger
 
 from cortexflow.config.settings import settings
 from cortexflow.core.errors import FetchError
-from cortexflow.core.http import get_async_client
+from cortexflow.core.http_client import get_async_client
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 

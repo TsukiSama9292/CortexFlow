@@ -6,7 +6,7 @@ import sys
 
 def test_cli_help() -> None:
     """Verify that the CLI can be invoked and shows help."""
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [sys.executable, "-m", "cortexflow_cli.main", "--help"],
         capture_output=True,
         text=True,

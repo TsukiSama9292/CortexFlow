@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from cortexflow.config.settings import settings
-from cortexflow.core.http import get_async_client
+from cortexflow.core.http_client import get_async_client
 
 
 class TestHTTP:
@@ -30,7 +30,7 @@ class TestHTTP:
                     break
             # 如果上面沒找到，可能是不同結構，我們直接檢查 _mounts 的內容
             if not found:
-                 assert len(client._mounts) > 0
+                assert len(client._mounts) > 0
 
             await client.aclose()
 

@@ -53,6 +53,7 @@ ignore = ["COM812"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG", "ANN", "D", "S", "SLF"]
+"migrations/*" = ["D100", "D104", "E402", "D415"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

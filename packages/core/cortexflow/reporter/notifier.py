@@ -22,7 +22,7 @@ class Notifier:
         if settings.notification_urls:
             urls = [u.strip() for u in settings.notification_urls.split(",") if u.strip()]
             for url in urls:
-                self.apobj.add(url)
+                self.apobj.add(url)  # type: ignore[reportUnknownMemberType]
             logger.debug("Notifier 已初始化，共 {count} 個渠道", count=len(urls))
 
     async def notify(self, report: ReportContent) -> bool:
@@ -32,17 +32,16 @@ class Notifier:
 
         title = f"🚀 CortexFlow 情報摘要: {report.title}"
 
-        # 建立簡短摘要
-        body_parts = []
+        body_parts: list[str] = []
         if report.key_points:
             body_parts.append("📌 核心洞察:")
-            for pt in report.key_points[:3]: # 只取前三點
+            for pt in report.key_points[:3]:  # 只取前三點
                 body_parts.append(f"• {pt}")
 
         if report.links:
             body_parts.append(f"\n🔗 完整報告連結: {report.links[0]}")
 
-        body = "\n".join(body_parts)
+        body = "\n".join(body_parts)  # pyright: ignore[reportUnknownArgumentType]
 
         try:
             # apprise 的 notify 是同步的，但在 async 環境中執行通常沒問題，

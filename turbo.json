@@ -1,27 +1,48 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["src/**", "package.json", "tsconfig.json"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "lint": {
-      "inputs": ["**/*.py", "**/*.ts", "**/*.tsx", "pyproject.toml", "package.json", "biome.json"],
-      "cache": true
-    },
-    "type-check": {
-      "inputs": ["**/*.py", "**/*.ts", "**/*.tsx", "pyproject.toml", "package.json", "tsconfig.json"],
-      "cache": true
-    },
-    "test": {
-      "dependsOn": ["^build"],
-      "inputs": ["**/*.py", "**/*.ts", "**/*.tsx", "tests/**", "pyproject.toml", "package.json"],
-      "cache": true
-    }
-  }
+	"$schema": "https://turbo.build/schema.json",
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"inputs": ["src/**", "package.json", "tsconfig.json"],
+			"outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"lint": {
+			"inputs": [
+				"**/*.py",
+				"**/*.ts",
+				"**/*.tsx",
+				"pyproject.toml",
+				"package.json",
+				"biome.json"
+			],
+			"cache": true
+		},
+		"type-check": {
+			"inputs": [
+				"**/*.py",
+				"**/*.ts",
+				"**/*.tsx",
+				"pyproject.toml",
+				"package.json",
+				"tsconfig.json"
+			],
+			"cache": true
+		},
+		"test": {
+			"dependsOn": ["^build"],
+			"inputs": [
+				"**/*.py",
+				"**/*.ts",
+				"**/*.tsx",
+				"tests/**",
+				"pyproject.toml",
+				"package.json"
+			],
+			"cache": true
+		}
+	}
 }
