@@ -15,6 +15,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, SecretStr
 from rich.console import Console
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from cortexflow.config.settings import settings
 from cortexflow.core.schema import Article, ArticleAnalysis
@@ -37,15 +43,51 @@ class _RawAnalysis(BaseModel):
     key_insights: list[str] = Field(description="2-3 條從此文章中提煉出的關鍵洞察")
 
 
+class FallbackAnalyzer:
+    """規則式降級分析器 — 當 LLM 失敗或未設定時使用。."""
+
+    def __init__(self, topic: str) -> None:
+        """初始化降級分析器。."""
+        self.topic = topic.lower()
+
+    def analyze(self, articles: list[Article]) -> list[ArticleAnalysis]:
+        """使用關鍵字比對進行簡易分析。."""
+        results: list[ArticleAnalysis] = []
+        topic_words = set(self.topic.split())
+
+        for a in articles:
+            content = (a.title + " " + (a.text or "")).lower()
+
+            # 簡易評分：包含完整主題給 7 分，每包含一個主題單詞給 1 分
+            score = 0.0
+            if self.topic in content:
+                score = 7.0
+            else:
+                matches = sum(1 for word in topic_words if word in content)
+                score = min(5.0, float(matches))
+
+            if score >= 3.0:  # 降級模式門檻較低
+                analysis = ArticleAnalysis(
+                    article_id=a.id,
+                    title=a.title,
+                    url=a.url,
+                    relevance_score=score,
+                    summary=a.text[:100] + "..." if a.text else "無摘要",
+                    sub_analysis="[降級模式] 關鍵字匹配分析。",
+                    key_insights=["(LLM 分析失敗，改用關鍵字匹配)"],
+                )
+                a.relevance_score = score
+                a.llm_judge_passed = True
+                results.append(analysis)
+
+        return results
+
+
 class ArticleAnalyzer:
     """對 Articles 進行一次性 LLM 分析（併發執行）。."""
 
     def __init__(self, topic: str) -> None:
-        """初始化分析器。.
-
-        Args:
-            topic: 研究主題。
-        """
+        """初始化分析器。."""
         self.topic = topic
 
         # type: ignore[call-arg]
@@ -85,8 +127,7 @@ class ArticleAnalyzer:
         )
 
         self._chain: Any = self._prompt | self.llm.with_structured_output(  # type: ignore[reportUnknownMemberType]
-            _RawAnalysis,
-            include_raw=True,
+            _RawAnalysis, include_raw=True
         )
 
         # ── 用量追蹤 ──
@@ -126,8 +167,16 @@ class ArticleAnalyzer:
         content = article.extracted_html or article.text or ""
         content = content[:6000]
 
-        try:
-            result = await self._chain.ainvoke(
+        @retry(
+            stop=stop_after_attempt(settings.max_retries),
+            wait=wait_exponential(
+                multiplier=1, min=settings.retry_min_wait, max=settings.retry_max_wait
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )
+        async def _invoke_with_retry() -> Any:  # noqa: ANN401
+            return await self._chain.ainvoke(
                 {
                     "topic": self.topic,
                     "title": article.title or "",
@@ -137,6 +186,9 @@ class ArticleAnalyzer:
                     "content": content,
                 },
             )
+
+        try:
+            result = await _invoke_with_retry()
 
             raw = cast("AIMessage", result["raw"])
             parsed = cast("_RawAnalysis", result["parsed"])

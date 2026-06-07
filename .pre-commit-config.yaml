@@ -1,7 +1,7 @@
 repos:
   # ── 第一道防線：Ruff (格式化與靜態檢查) ──
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.0
+    rev: v0.9.0
     hooks:
       - id: ruff
         args: [ --fix ]

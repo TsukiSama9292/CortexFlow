@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     relevance_threshold: int = 5
     max_results_per_source: int = 20
     request_timeout: int = 30
+    stage_timeout: int = 300  # 5 minutes per stage
+    max_retries: int = 3
+    retry_min_wait: int = 2
+    retry_max_wait: int = 10
 
 
 settings = Settings()

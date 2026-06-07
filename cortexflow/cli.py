@@ -75,6 +75,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--log-file", help="日誌檔案路徑")
     parser.add_argument("--history", action="store_true", help="查看執行歷史記錄")
     parser.add_argument("--replay", type=int, help="從歷史記錄重現特定執行 (ID)")
+    parser.add_argument("--resume", type=int, help="從歷史記錄中的失敗點續傳執行 (ID)")
 
     # 設定從檔案載入的預設值
     parser.set_defaults(**defaults)
@@ -190,6 +191,7 @@ def _show_history(console: Console) -> None:
     table.add_column("狀態")
     table.add_column("耗時 (秒)", justify="right")
     table.add_column("Tokens", justify="right")
+    table.add_column("上次階段")
 
     for h in history:
         status_str = "[green]✅ 成功[/green]" if h["status"] == "success" else "[red]❌ 失敗[/red]"
@@ -200,6 +202,7 @@ def _show_history(console: Console) -> None:
             status_str,
             f"{h['duration_seconds']:.2f}",
             f"{h['total_tokens']:,}",
+            h.get("last_completed_stage") or "-",
         )
 
     console.print(table)
@@ -226,14 +229,43 @@ async def _replay_execution(execution_id: int, console: Console) -> None:
     await pipeline.run()
 
 
+async def _resume_execution(execution_id: int, console: Console) -> None:
+    """從歷史記錄續傳執行。."""
+    db = Database()
+    exec_data = db.get_execution(execution_id)
+
+    if not exec_data:
+        console.print(f"  [red]❌ 找不到 ID 為 {execution_id} 的執行記錄[/red]")
+        return
+
+    if exec_data["status"] == "success":
+        console.print(f"  [yellow]⚠ 執行記錄 #{execution_id} 已成功完成，無需續傳。[/yellow]")
+        if not Confirm.ask("  是否仍要以此設定重新執行 (Replay)?"):
+            return
+        await _replay_execution(execution_id, console)
+        return
+
+    import json
+
+    input_data = json.loads(exec_data["input_json"])
+    last_stage = exec_data.get("last_completed_stage") or "None"
+    console.print(f"  [bold]⏯️ 正在續傳執行記錄 #{execution_id}[/bold]")
+    console.print(f"  [dim]主題: {input_data['topic']}, 上次完成: {last_stage}[/dim]\n")
+
+    pipeline_input = PipelineInput(**input_data)
+    use_demo = bool(exec_data.get("demo", 0))
+    pipeline = Pipeline(pipeline_input, demo=use_demo, execution_id=execution_id)
+    await pipeline.run()
+
+
 def main(argv: list[str] | None = None) -> None:
     """CortexFlow 入口函式。."""
     console = Console()
 
     show_help = "--help" in sys.argv or "-h" in sys.argv
     if argv is None and not show_help and "--topic" not in sys.argv and "--demo" not in sys.argv:
-        # 檢查是否有 history/replay 參數，有的話不進入互動模式
-        if "--history" in sys.argv or "--replay" in sys.argv:
+        # 檢查是否有 history/replay/resume 參數，有的話不進入互動模式
+        if any(arg in sys.argv for arg in ("--history", "--replay", "--resume")):
             args = parse_args(argv)
         else:
             args = _interactive_prompt(console)
@@ -250,6 +282,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.replay:
         asyncio.run(_replay_execution(args.replay, console))
+        return
+
+    if args.resume:
+        asyncio.run(_resume_execution(args.resume, console))
         return
 
     # 3. 執行 Pipeline

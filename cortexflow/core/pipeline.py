@@ -10,6 +10,7 @@ Stage 4 (Analyze) 是 Map-Reduce 模式：
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -75,10 +76,17 @@ class StageResult:
 class Pipeline:
     """五階段固定管道協調器。."""
 
-    def __init__(self, inp: PipelineInput, *, demo: bool = False) -> None:
+    def __init__(
+        self,
+        inp: PipelineInput,
+        *,
+        demo: bool = False,
+        execution_id: int | None = None,
+    ) -> None:
         """初始化管道。."""
         self.inp = inp
         self.demo = demo
+        self.execution_id = execution_id
         self.articles: list[Article] = []
         self.analyses: list[ArticleAnalysis] = []
         self.stage_results: list[StageResult] = []
@@ -90,6 +98,7 @@ class Pipeline:
         }
         self.report_content: ReportContent | None = None
         self.db = Database()
+        self.last_completed_stage: str | None = None
 
     # ────────────────────────────
     # 公開介面
@@ -100,53 +109,69 @@ class Pipeline:
         console = Console()
         logger.info("Pipeline 開始執行 - 主題: {topic}", topic=self.inp.topic)
 
+        # 如果是續傳模式，從資料庫載入狀態
+        if self.execution_id:
+            logger.info("正在續傳執行記錄 (ID: {id})", id=self.execution_id)
+            await self._load_state()
+
         self._print_pipeline_diagram(console)
 
         self._estimate_cost(console)
 
         # Stage 1: Fetch
         for source in self.inp.sources:
-            await self._run_stage(
-                f"fetch_{source}", lambda s=source: self._fetch_source(s), console
-            )
+            stage_name = f"fetch_{source}"
+            if self._should_skip(stage_name):
+                continue
+            await self._run_stage(stage_name, lambda s=source: self._fetch_source(s), console)
 
         # Stage 2: Normalize
-        await self._run_stage("normalize", self._normalize, console)
+        if not self._should_skip("normalize"):
+            await self._run_stage("normalize", self._normalize, console)
 
         # Stage 3: Extract
-        await self._run_stage("extract", self._extract, console)
+        if not self._should_skip("extract"):
+            await self._run_stage("extract", self._extract, console)
 
         # Stage 4: Analyze（併發 LLM 評分+摘要+子分析）
-        if settings.openai_api_key and not self.demo:
-            await self._run_stage("analyze", self._analyze, console)
-        elif self.demo:
-            await self._run_stage("analyze", self._analyze_demo, console)
-        else:
-            console.print("  [yellow]⚠ 未設定 OPENAI_API_KEY，跳過 LLM 分析階段")
+        if not self._should_skip("analyze"):
+            if settings.openai_api_key and not self.demo:
+                await self._run_stage("analyze", self._analyze, console)
+            elif self.demo:
+                await self._run_stage("analyze", self._analyze_demo, console)
+            else:
+                await self._run_stage("analyze", self._analyze_fallback, console)
 
         # Stage 4.5: Synthesize（彙總子分析 → 最終報告）
-        has_llm = bool(settings.openai_api_key) or self.demo
-        if has_llm and self.analyses:
-            await self._run_stage("synthesize", self._synthesize, console)
-        else:
-            logger.info("跳過報告合成階段（需 LLM + 有分析結果）")
-            # 為了測試一致性，即使跳過也記錄一個成功的空結果
-            self.stage_results.append(
-                StageResult(stage_name="synthesize", success=True, duration=0.0, items_count=0)
-            )
+        if not self._should_skip("synthesize"):
+            has_llm = bool(settings.openai_api_key) or self.demo
+            if has_llm and self.analyses:
+                await self._run_stage("synthesize", self._synthesize, console)
+            else:
+                logger.info("跳過報告合成階段（需 LLM + 有分析結果）")
+                # 為了測試一致性，即使跳過也記錄一個成功的空結果
+                self.stage_results.append(
+                    StageResult(stage_name="synthesize", success=True, duration=0.0, items_count=0)
+                )
 
         # Stage 5: Report
-        await self._run_stage("report", self._report, console)
+        if not self._should_skip("report"):
+            await self._run_stage("report", self._report, console)
 
         self._print_summary(console)
         output = self._build_output()
 
-        # 儲存到資料庫
+        # 最終更新資料庫
         try:
-            exec_id = self.db.save_execution(output, demo=self.demo)
-            logger.debug("執行記錄已儲存 (ID: {id})", id=exec_id)
+            if self.execution_id:
+                self.db.update_execution(self.execution_id, output, "success", last_stage="report")
+            else:
+                self.execution_id = self.db.save_execution(
+                    output, demo=self.demo, last_stage="report"
+                )
+            logger.debug("執行記錄已完成並儲存 (ID: {id})", id=self.execution_id)
         except Exception as e:  # noqa: BLE001
-            logger.warning("無法儲存執行記錄: {error}", error=e)
+            logger.warning("無法更新執行記錄: {error}", error=e)
 
         return output
 
@@ -166,7 +191,8 @@ class Pipeline:
         status.start()
         t0 = time.monotonic()
         try:
-            await fn()
+            # 加上逾時控制
+            await asyncio.wait_for(fn(), timeout=settings.stage_timeout)
             elapsed = time.monotonic() - t0
             status.stop()
             result = StageResult(
@@ -175,7 +201,12 @@ class Pipeline:
                 duration=elapsed,
                 items_count=len(self.articles),
             )
+            self.last_completed_stage = name
             console.print(f"  [green]✔[/green] {label} 完成  [dim]({elapsed:.2f}s)[/dim]")
+
+            # 中間狀態存檔
+            self._save_intermediate_state("running")
+
         except Exception as exc:  # noqa: BLE001
             elapsed = time.monotonic() - t0
             status.stop()
@@ -191,6 +222,10 @@ class Pipeline:
             if fix:
                 console.print(f"    [dim]💡 建議: {fix}[/dim]")
             self.errors.append({"stage": name, "error": str(exc)})
+
+            # 失敗也存檔，狀態改為 failed
+            self._save_intermediate_state("failed")
+
         self.stage_results.append(result)
 
     # ────────────────────────────
@@ -254,6 +289,17 @@ class Pipeline:
         self.llm_usage["total_tokens"] += analyzer.total_tokens
         self.llm_usage["total_cost_usd"] += analyzer.total_cost_usd
         self.llm_usage["calls"] += analyzer.calls
+
+    async def _analyze_fallback(self) -> None:
+        """當 LLM 無法使用時的降級分析邏輯。."""
+        from cortexflow.filter.article_analyzer import FallbackAnalyzer
+
+        logger.info("使用規則式降級分析器 (Fallback)")
+        analyzer = FallbackAnalyzer(topic=self.inp.topic)
+        self.analyses = analyzer.analyze(self.articles)
+
+        passed_ids = {a.article_id for a in self.analyses}
+        self.articles = [a for a in self.articles if a.id in passed_ids]
 
     async def _analyze_demo(self) -> None:
         for a in self.articles:
@@ -319,6 +365,100 @@ class Pipeline:
             self.errors,
             self.report_content,
         )
+
+    # ────────────────────────────
+    # 續傳邏輯
+    # ────────────────────────────
+
+    def _should_skip(self, stage_name: str) -> bool:
+        """檢查是否應跳過此階段（續傳模式下）。."""
+        if not self.execution_id or not self.last_completed_stage:
+            return False
+
+        # 定義 Stage 的線性順序以便比較
+        stage_order = [
+            "fetch_reddit",
+            "fetch_github",
+            "fetch_hackernews",
+            "fetch_lobsters",
+            "normalize",
+            "extract",
+            "analyze",
+            "synthesize",
+            "report",
+        ]
+        try:
+            last_idx = stage_order.index(self.last_completed_stage)
+            curr_idx = stage_order.index(stage_name)
+            return curr_idx <= last_idx
+        except ValueError:
+            return False
+
+    async def _load_state(self) -> None:
+        """從資料庫載入執行狀態。."""
+        if not self.execution_id:
+            return
+
+        exec_data = self.db.get_execution(self.execution_id)
+        if not exec_data or not exec_data["output_json"]:
+            return
+
+        import json
+
+        try:
+            output = PipelineOutput(**json.loads(exec_data["output_json"]))
+            self.articles = output.articles
+            self.analyses = [
+                ArticleAnalysis(
+                    article_id=a.id,
+                    title=a.title,
+                    url=a.url,
+                    relevance_score=a.relevance_score or 0.0,
+                    summary=a.summary or "",
+                    sub_analysis=a.sub_analysis or "",
+                    key_insights=a.key_insights or [],
+                )
+                for a in self.articles
+                if a.relevance_score is not None
+            ]
+            self.llm_usage = output.llm_usage
+            self.last_completed_stage = exec_data["last_completed_stage"]
+
+            # 還原 stage_results 列表
+            self.stage_results = []
+            for name, stats in output.stage_stats.items():
+                self.stage_results.append(
+                    StageResult(
+                        stage_name=name,
+                        success=stats["success"],
+                        duration=stats["duration"],
+                        items_count=stats["items_count"],
+                        error=stats.get("error"),
+                    )
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.error("還原狀態失敗: {error}", error=e)
+
+    def _save_intermediate_state(self, status: str) -> None:
+        """儲存中間執行狀態到資料庫。."""
+        output = self._build_output()
+        try:
+            if self.execution_id:
+                self.db.update_execution(
+                    self.execution_id,
+                    output,
+                    status,
+                    last_stage=self.last_completed_stage,
+                )
+            else:
+                self.execution_id = self.db.save_execution(
+                    output,
+                    status=status,
+                    demo=self.demo,
+                    last_stage=self.last_completed_stage,
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("無法儲存中間狀態: {error}", error=e)
 
     # ────────────────────────────
     # 內部輔助

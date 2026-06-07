@@ -37,7 +37,8 @@ class Database:
                     status TEXT,
                     duration_seconds REAL,
                     total_tokens INTEGER DEFAULT 0,
-                    demo INTEGER DEFAULT 0
+                    demo INTEGER DEFAULT 0,
+                    last_completed_stage TEXT
                 )
                 """,
             )
@@ -49,20 +50,20 @@ class Database:
         status: str = "success",
         *,
         demo: bool = False,
+        last_stage: str | None = None,
     ) -> int:
-        """儲存一次 Pipeline 執行結果。."""
+        """儲存或更新一次 Pipeline 執行結果。."""
         # 計算總耗時
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
 
-        sql = """
-            INSERT INTO executions (
-                topic, timestamp, input_json, output_json, status,
-                duration_seconds, total_tokens, demo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """
         with self._get_connection() as conn:
             cursor = conn.execute(
-                sql,
+                """
+                INSERT INTO executions (
+                    topic, timestamp, input_json, output_json, status,
+                    duration_seconds, total_tokens, demo, last_completed_stage
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 (
                     output.input.topic,
                     datetime.now(UTC).isoformat(),
@@ -72,17 +73,52 @@ class Database:
                     duration,
                     output.llm_usage.get("total_tokens", 0),
                     1 if demo else 0,
+                    last_stage,
                 ),
             )
             conn.commit()
             return cursor.lastrowid or 0
+
+    def update_execution(
+        self,
+        execution_id: int,
+        output: PipelineOutput,
+        status: str,
+        *,
+        last_stage: str | None = None,
+    ) -> None:
+        """更新現有的執行記錄。."""
+        duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
+
+        with self._get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE executions SET
+                    output_json = ?,
+                    status = ?,
+                    duration_seconds = ?,
+                    total_tokens = ?,
+                    last_completed_stage = ?
+                WHERE id = ?
+                """,
+                (
+                    output.model_dump_json(),
+                    status,
+                    duration,
+                    output.llm_usage.get("total_tokens", 0),
+                    last_stage,
+                    execution_id,
+                ),
+            )
+            conn.commit()
 
     def get_history(self, limit: int = 10) -> list[dict[str, Any]]:
         """取得最近的執行記錄。."""
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
-                "SELECT id, topic, timestamp, status, duration_seconds, total_tokens "
+                "SELECT id, topic, timestamp, status, duration_seconds, "
+                "total_tokens, last_completed_stage "
                 "FROM executions ORDER BY timestamp DESC LIMIT ?",
                 (limit,),
             )

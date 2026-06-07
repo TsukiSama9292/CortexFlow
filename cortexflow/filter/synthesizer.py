@@ -12,6 +12,12 @@ from typing import TYPE_CHECKING, Any, cast
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from cortexflow.config.settings import settings
 from cortexflow.core.schema import ArticleAnalysis, ReportContent
@@ -76,8 +82,7 @@ class Synthesizer:
         )
 
         self._chain: Any = self._prompt | self.llm.with_structured_output(  # pyright: ignore[reportUnknownMemberType]
-            ReportContent,
-            include_raw=True,
+            ReportContent, include_raw=True
         )
 
         self.total_tokens: int = 0
@@ -94,13 +99,24 @@ class Synthesizer:
 
         analyses_text = self._format_analyses(analyses)
 
-        try:
-            result = await self._chain.ainvoke(
+        @retry(
+            stop=stop_after_attempt(settings.max_retries),
+            wait=wait_exponential(
+                multiplier=1, min=settings.retry_min_wait, max=settings.retry_max_wait
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )
+        async def _invoke_with_retry() -> Any:  # noqa: ANN401
+            return await self._chain.ainvoke(
                 {
                     "topic": self.topic,
                     "analyses_text": analyses_text,
                 },
             )
+
+        try:
+            result = await _invoke_with_retry()
 
             raw = cast("AIMessage", result["raw"])
             parsed = cast("ReportContent", result["parsed"])

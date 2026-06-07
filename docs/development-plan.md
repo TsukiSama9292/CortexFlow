@@ -57,39 +57,39 @@
 
 ---
 
-## 階段二：MVP（最小可行性產品）— 下一階段
+## 階段二：MVP（最小可行性產品）✅（已完成）
 
 ### 核心目標：讓真實使用者願意在實際工作中使用
 
 ### 🎯 關鍵成果
 
 #### 2.1 測試與品質基礎建設
-- [ ] **單元測試擴充**：覆蓋 fetchers、extractor、reporter 模組（目標 > 80 測項）
-- [ ] **整合測試**：Mock HTTP/LLM 的 Pipeline 端到端測試
-- [ ] **CI/CD**：GitHub Actions（PR 時自動跑 pytest + ruff + pyright）
-- [ ] **pre-commit hook**：提交前自動檢查格式與型態
+- [x] **單元測試擴充**：覆蓋 fetchers、extractor、reporter 模組（目標 > 80 測項）
+- [x] **整合測試**：Mock HTTP/LLM 的 Pipeline 端到端測試
+- [x] **CI/CD**：GitHub Actions（PR 時自動跑 pytest + ruff + pyright）
+- [x] **pre-commit hook**：提交前自動檢查格式與型態
 
 #### 2.2 可觀測性
-- [ ] **結構化日誌**：整合 `loguru` 或標準 `logging`，支援 `--verbose` / `--log-file`
-- [ ] **執行記錄持久化**：SQLite 儲存每次 Pipeline 執行的輸入/輸出/耗時/Token 用量
-- [ ] **`history` 指令**：`uv run cortexflow --history` 列出近期執行記錄
-- [ ] **`replay` 指令**：`uv run cortexflow --replay <id>` 從歷史記錄重現特定執行
+- [x] **結構化日誌**：整合 `loguru` 或標準 `logging`，支援 `--verbose` / `--log-file`
+- [x] **執行記錄持久化**：SQLite 儲存每次 Pipeline 執行的輸入/輸出/耗時/Token 用量
+- [x] **`history` 指令**：`uv run cortexflow --history` 列出近期執行記錄
+- [x] **`replay` 指令**：`uv run cortexflow --replay <id>` 從歷史記錄重現特定執行
 
 #### 2.3 新資料來源
-- [ ] **Hacker News Fetcher**：Algolia Search API 搜尋 + 文章內容提取
-- [ ] **Lobsters Fetcher**：API 撈取熱門/最新文章
-- [ ] **插件化 Fetcher 機制**：定義 Fetcher 註冊介面，`cortexflow/fetchers/plugins/` 自動發現
-- [ ] **設定檔支援**：`cortexflow.yml` / `cortexflow.toml` 指定來源組合與參數
+- [x] **Hacker News Fetcher**：Algolia Search API 搜尋 + 文章內容提取
+- [x] **Lobsters Fetcher**：API 撈取熱門/最新文章
+- [x] **插件化 Fetcher 機制**：定義 Fetcher 註冊介面，`cortexflow/fetchers/plugins/` 自動發現
+- [x] **設定檔支援**：`cortexflow.toml` 指定來源組合與參數
 
 #### 2.4 Pipeline 強化
-- [ ] **重試機制**：可設定的 retry policy（次數、backoff），特別是 LLM 呼叫
-- [ ] **Stage 中斷續傳**：支援 `--resume` 從失敗 stage 繼續執行
-- [ ] **超時控制強化**：每個 Stage 有獨立的 timeout 設定
-- [ ] **更好的降級模式**：當 LLM 失敗時，使用規則式關鍵字評分作為降級
+- [x] **重試機制**：可設定的 retry policy（次數、backoff），特別是 LLM 呼叫
+- [x] **Stage 中斷續傳**：支援 `--resume` 從失敗 stage 繼續執行
+- [x] **超時控制強化**：每個 Stage 有獨立的 timeout 設定
+- [x] **更好的降級模式**：當 LLM 失敗時，使用規則式關鍵字評分作為降級
 
 #### 2.5 型態與靜態分析
-- [ ] **pyright strict mode**：整份 codebase 通過 strict type check
-- [ ] **ruff 完整規則集**：導入所有相關 linter rules
+- [x] **pyright strict mode**：整份 codebase 通過 strict type check
+- [x] **ruff 完整規則集**：導入所有相關 linter rules
 
 ### 📊 驗收標準
 
