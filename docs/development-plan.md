@@ -97,8 +97,12 @@
 ### 🎯 關鍵成果
 
 #### 3.1 商業級開發架構 (Monorepo)
-- [ ] **Turborepo 深度整合**：建立 Monorepo 結構，加速建置與測試。
-- [ ] **Control Plane / Data Plane 解耦設計**：將 API 調度中心與 ETL 執行節點分離。
+- [ ] **Turborepo 深度整合**：
+    - 建立 Monorepo 結構，加速建置與測試。
+    - 在根目錄配置任務管線，將 `uv run pytest` 與 `next build` 納入網格相依性。
+- [ ] **Control Plane / Data Plane 解耦設計**：
+    - 將 API 調度中心與 ETL 執行節點分離，Data Plane 支援水平擴展。
+    - 實作心跳機制 (Heartbeat)，若 Worker 異常中斷需自動釋放任務。
 
 #### 3.2 工業級部屬方案 (Infrastructure as Code)
 - [ ] **Traefik 邊緣路由器導入**：動態路由分流與自動化 SSL 管理。
@@ -108,11 +112,18 @@
 #### 3.3 商業數據基石 (ORM & Migration)
 - [ ] **SQLAlchemy ORM 遷移**：從 SQLite 升級至企業級 PostgreSQL。
 - [ ] **Alembic Migration**：建立嚴謹的資料庫遷移版本控制。
-- [ ] **PostgreSQL 事務性任務佇列 (DB-as-a-Queue)**：利用 `FOR UPDATE SKIP LOCKED` 實作高效任務分發，移除 Redis 依賴。
+- [ ] **PostgreSQL 事務性任務佇列 (DB-as-a-Queue)**：
+    - 利用 `FOR UPDATE SKIP LOCKED` 實作高效任務分發，移除 Redis 依賴。
+    - 針對狀態與時間戳建立複合索引，並確保耗時操作位於事務外部。
 
 #### 3.4 商業化與通知整合 (Marketability)
 - [ ] **多渠道通知系統**：支援 Slack, Discord, Telegram 即時推送報告摘要。
-- [ ] **電子郵件彙報**：實作定期定額的情報總結 Email。
+- [ ] **進階採集防護 (Proxy Management)**：
+    - 實作代理伺服器池 (Proxy Pool) 與動態 User-Agent 切換，防止被目標網站阻擋。
+- [ ] **分層聚合機制 (Hierarchical Reduction)**：
+    - 針對大規模採集（>50 篇文章），實作分批分析與二次合成，避免 LLM 上下文視窗溢出。
+- [ ] **進階去重演算法**：
+    - 導入 LSH (Locality Sensitive Hashing) 如 MinHash，應對微調重複內容。
 
 #### 3.5 前端管理後台 (`apps/web`)
 - [ ] **Next.js 官方網站**：視覺化 Dashboard、歷史情報檢索、Token 成本統計。
