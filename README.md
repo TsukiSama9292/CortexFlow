@@ -116,9 +116,11 @@ uv run cortexflow --replay 1
 - ✅ **品質**: 100% Pyright Strict、Ruff、80+ Pytest 測項、CI/CD
 
 ### Phase 3: MMP (進行中)
-- [ ] LLM Response 快取
-- [ ] HTML/PDF 報告格式
-- [ ] Docker 化與排程執行器
+- [ ] **架構工程化**: Turborepo, Control/Data Plane 分離
+- [ ] **部屬自動化**: Traefik API Gateway, Docker Multi-stage, Helm Charts
+- [ ] **商業數據**: SQLAlchemy ORM, Alembic Migration, PostgreSQL Task Queue
+- [ ] **通知整合**: Slack/Discord/Telegram Webhooks
+- [ ] **前端門戶**: Next.js 管理後台與視覺化儀表板
 
 ---
 
