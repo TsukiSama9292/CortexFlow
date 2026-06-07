@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cortexflow.fetchers.github_fetcher import GitHubFetcher
+from cortexflow.fetchers.hn_fetcher import HackerNewsFetcher
+from cortexflow.fetchers.lobsters_fetcher import LobstersFetcher
 from cortexflow.fetchers.reddit_fetcher import RedditFetcher
 
 if TYPE_CHECKING:
@@ -98,3 +100,52 @@ async def test_github_fetcher_language_filter(httpx_mock: HTTPXMock) -> None:
     # 驗證請求 URL 是否包含 /python
     params = httpx_mock.get_request().url.path
     assert "/python" in params
+
+
+@pytest.mark.asyncio
+async def test_hn_fetcher_success(httpx_mock: HTTPXMock) -> None:
+    """測試 Hacker News Fetcher。"""
+    mock_response = {
+        "hits": [
+            {
+                "objectID": "123",
+                "title": "HN Story",
+                "author": "hn_user",
+                "points": 50,
+                "created_at": "2024-01-01T12:00:00Z",
+                "url": "https://example.com/hn",
+            },
+        ],
+    }
+    search_url = "https://hn.algolia.com/api/v1/search?query=test&tags=story&hitsPerPage=10"
+    httpx_mock.add_response(url=search_url, json=mock_response)
+
+    fetcher = HackerNewsFetcher()
+    articles = await fetcher.fetch("test", max_results=10)
+
+    assert len(articles) == 1
+    assert articles[0].source == "hackernews"
+    assert articles[0].title == "HN Story"
+
+
+@pytest.mark.asyncio
+async def test_lobsters_fetcher_success(httpx_mock: HTTPXMock) -> None:
+    """測試 Lobsters Fetcher。"""
+    mock_response = [
+        {
+            "short_id": "abc",
+            "title": "Lobsters Test",
+            "score": 10,
+            "created_at": "2024-01-01T12:00:00Z",
+            "tags": ["rust", "test"],
+            "submitter_user": {"username": "l_user"},
+        },
+    ]
+    httpx_mock.add_response(url="https://lobste.rs/hottest.json", json=mock_response)
+
+    fetcher = LobstersFetcher()
+    articles = await fetcher.fetch("test", max_results=10)
+
+    assert len(articles) == 1
+    assert articles[0].source == "lobsters"
+    assert "Test" in articles[0].title

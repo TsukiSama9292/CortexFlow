@@ -210,18 +210,19 @@ class Pipeline:
         except Exception as exc:  # noqa: BLE001
             elapsed = time.monotonic() - t0
             status.stop()
+            error_msg = str(exc) or exc.__class__.__name__
             result = StageResult(
                 stage_name=name,
                 success=False,
                 duration=elapsed,
-                error=str(exc),
+                error=error_msg,
             )
-            msg = f"  [red]✘[/red] {label} 失敗  [dim]({elapsed:.2f}s)[/dim]: {exc}"
+            msg = f"  [red]✘[/red] {label} 失敗  [dim]({elapsed:.2f}s)[/dim]: {error_msg}"
             console.print(msg)
             fix = _FIX_SUGGESTIONS.get(name)
             if fix:
                 console.print(f"    [dim]💡 建議: {fix}[/dim]")
-            self.errors.append({"stage": name, "error": str(exc)})
+            self.errors.append({"stage": name, "error": error_msg})
 
             # 失敗也存檔，狀態改為 failed
             self._save_intermediate_state("failed")
@@ -503,11 +504,13 @@ class Pipeline:
                 f"  {status_icon}[/] {label:12s}"
                 f"  [cyan]{r.duration:6.2f}s[/cyan]  {r.items_count} items",
             )
-        if self.llm_usage["calls"] > 0:
+        calls = self.llm_usage.get("calls", 0)
+        if calls > 0:
             console.print()
-            console.print(f"  🤖 LLM 呼叫: {self.llm_usage['calls']} 次")
-            console.print(f"  📊 Token 用量: {self.llm_usage['total_tokens']:,}")
-            console.print(f"  💰 預估成本: [green]${self.llm_usage['total_cost_usd']:.4f}[/green]")
+            console.print(f"  🤖 LLM 呼叫: {calls} 次")
+            console.print(f"  📊 Token 用量: {self.llm_usage.get('total_tokens', 0):,}")
+            cost = self.llm_usage.get("total_cost_usd", 0.0)
+            console.print(f"  💰 預估成本: [green]${cost:.4f}[/green]")
         console.print()
 
     def _build_output(self) -> PipelineOutput:
