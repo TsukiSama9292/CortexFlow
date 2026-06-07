@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 import httpx
 import trafilatura
 from bs4 import BeautifulSoup
@@ -29,9 +31,10 @@ class FastExtractor:
         """對有 URL 的文章進行內容提取（併發執行）。."""
         to_extract = [a for a in articles if a.url and not a.extracted_html]
         if not to_extract:
+            logger.debug("沒有需要提取內容的文章")
             return
 
-        console.print(f"  內容提取: {len(to_extract)} 篇文章")
+        logger.info("開始提取 {count} 篇文章內容", count=len(to_extract))
 
         sem = asyncio.Semaphore(10)  # 併發上限
 
@@ -39,14 +42,16 @@ class FastExtractor:
             async with sem:
                 try:
                     article.extracted_html = await self._extract(article.url)
+                    if article.extracted_html:
+                        logger.debug("提取成功: {title}", title=article.title[:40])
                 except Exception as exc:  # noqa: BLE001
-                    console.print(f"    [yellow]⚠ 提取失敗 ({article.title[:30]}): {exc}")
+                    logger.warning("提取失敗 ({title}): {error}", title=article.title[:30], error=exc)
                     article.extracted_html = None
 
         await asyncio.gather(*[_extract_one(a) for a in to_extract])
 
         success = sum(1 for a in to_extract if a.extracted_html)
-        console.print(f"  提取成功: {success}/{len(to_extract)}")
+        logger.info("內容提取完成: {success}/{total}", success=success, total=len(to_extract))
 
     async def _extract(self, url: str) -> str | None:
         """依序嘗試 trafilatura → BeautifulSoup。."""

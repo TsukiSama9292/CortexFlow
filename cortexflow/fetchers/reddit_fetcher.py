@@ -13,6 +13,7 @@ import random
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from loguru import logger
 
 from cortexflow.config.settings import settings
 from cortexflow.core.schema import Article
@@ -27,7 +28,7 @@ _DEMO_SUBREDDITS = [
     "r/rust",
     "r/Python",
     "r/devops",
-    r"r/startups",
+    "r/startups",
 ]
 
 _DEMO_TITLES = [
@@ -62,28 +63,26 @@ class RedditFetcher(BaseFetcher):
     OLD_REDDIT_URL = "https://old.reddit.com"
 
     async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
-        """從 Reddit 採集文章。.
-
-        Args:
-            topic: 研究主題。
-            max_results: 最大結果數。
-
-        Returns:
-            Article 列表。
-        """
+        """從 Reddit 採集文章。."""
+        logger.debug("從 Reddit 搜尋主題: {topic}", topic=topic)
         # 嘗試主要端點
         try:
-            return await self._fetch_from_api(self.BASE_URL, topic, max_results)
-        except Exception:  # noqa: BLE001, S110
-            pass
+            articles = await self._fetch_from_api(self.BASE_URL, topic, max_results)
+            logger.info("Reddit API 採集成功: {count} 篇文章", count=len(articles))
+            return articles
+        except Exception as e:  # noqa: BLE001, S110
+            logger.debug("Reddit 主要 API 端點失敗: {error}", error=e)
 
         # 備援：old.reddit.com
         try:
-            return await self._fetch_from_api(self.OLD_REDDIT_URL, topic, max_results)
-        except Exception:  # noqa: BLE001, S110
-            pass
+            articles = await self._fetch_from_api(self.OLD_REDDIT_URL, topic, max_results)
+            logger.info("Reddit Old API 採集成功: {count} 篇文章", count=len(articles))
+            return articles
+        except Exception as e:  # noqa: BLE001, S110
+            logger.debug("Reddit 備援 API 端點失敗: {error}", error=e)
 
         # 最終備援：Demo 模式
+        logger.warning("Reddit API 呼叫均失敗，切換至 Demo 模式")
         return self._fetch_demo(topic, max_results)
 
     async def _fetch_from_api(self, base_url: str, topic: str, max_results: int) -> list[Article]:
@@ -123,7 +122,9 @@ class RedditFetcher(BaseFetcher):
                     author=raw.get("author", ""),
                     url=f"https://www.reddit.com{raw.get('permalink', '')}",
                     score=raw.get("score", 0),
-                    created_at=datetime.fromtimestamp(created, tz=UTC) if created else None,
+                    created_at=datetime.fromtimestamp(created, tz=UTC)
+                    if created
+                    else None,
                 ),
             )
 

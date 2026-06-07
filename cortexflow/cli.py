@@ -11,6 +11,8 @@ from typing import Literal, cast
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
+from cortexflow.core.db import Database
+from cortexflow.core.logger import setup_logger
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import PipelineInput
 
@@ -64,6 +66,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Demo 模式：使用模擬資料，不需任何 API Key",
     )
+    parser.add_argument("--verbose", "-v", action="store_true", help="顯示詳細日誌")
+    parser.add_argument("--log-file", help="日誌檔案路徑")
+    parser.add_argument("--history", action="store_true", help="查看執行歷史記錄")
+    parser.add_argument("--replay", type=int, help="從歷史記錄重現特定執行 (ID)")
 
     args = parser.parse_args(argv)
 
@@ -151,22 +157,93 @@ def _check_environment(console: Console) -> bool:
     return ok
 
 
+def _show_history(console: Console) -> None:
+    """顯示執行歷史記錄表格。."""
+    db = Database()
+    history = db.get_history()
+
+    if not history:
+        console.print("  [yellow]目前無執行記錄。[/yellow]")
+        return
+
+    from rich.table import Table
+
+    table = Table(title="CortexFlow 執行歷史")
+    table.add_column("ID", justify="right", style="cyan")
+    table.add_column("主題", style="magenta")
+    table.add_column("時間", style="green")
+    table.add_column("狀態")
+    table.add_column("耗時 (秒)", justify="right")
+    table.add_column("Tokens", justify="right")
+
+    for h in history:
+        status_str = "[green]✅ 成功[/green]" if h["status"] == "success" else "[red]❌ 失敗[/red]"
+        table.add_row(
+            str(h["id"]),
+            h["topic"],
+            h["timestamp"],
+            status_str,
+            f"{h['duration_seconds']:.2f}",
+            f"{h['total_tokens']:,}",
+        )
+
+    console.print(table)
+
+
+async def _replay_execution(execution_id: int, console: Console) -> None:
+    """從歷史記錄重現特定執行。."""
+    db = Database()
+    exec_data = db.get_execution(execution_id)
+
+    if not exec_data:
+        console.print(f"  [red]❌ 找不到 ID 為 {execution_id} 的執行記錄[/red]")
+        return
+
+    import json
+
+    input_data = json.loads(exec_data["input_json"])
+    console.print(f"  [bold]🔄 正在重現執行記錄 #{execution_id}[/bold]")
+    console.print(f"  [dim]主題: {input_data['topic']}[/dim]\n")
+
+    pipeline_input = PipelineInput(**input_data)
+    use_demo = bool(exec_data.get("demo", 0))
+    pipeline = Pipeline(pipeline_input, demo=use_demo)
+    await pipeline.run()
+
+
 def main(argv: list[str] | None = None) -> None:
     """CortexFlow 入口函式。."""
     console = Console()
 
     show_help = "--help" in sys.argv or "-h" in sys.argv
     if argv is None and not show_help and "--topic" not in sys.argv and "--demo" not in sys.argv:
-        args = _interactive_prompt(console)
+        # 檢查是否有 history/replay 參數，有的話不進入互動模式
+        if "--history" in sys.argv or "--replay" in sys.argv:
+            args = parse_args(argv)
+        else:
+            args = _interactive_prompt(console)
     else:
         args = parse_args(argv)
 
+    # 1. 配置日誌
+    setup_logger(verbose=args.verbose, log_file=args.log_file)
+
+    # 2. 處理特定指令
+    if args.history:
+        _show_history(console)
+        return
+
+    if args.replay:
+        asyncio.run(_replay_execution(args.replay, console))
+        return
+
+    # 3. 執行 Pipeline
     if args.demo:
         console.print("[bold]🎮 Demo 模式[/bold] — 使用模擬資料\n")
     else:
         _check_environment(console)
 
-    sources = cast("list[Literal['reddit', 'github']]", args.sources or ["reddit", "github"])
+    sources = cast(list[Literal["reddit", "github"]], args.sources or ["reddit", "github"])
 
     pipeline_input = PipelineInput(
         topic=args.topic,
@@ -184,6 +261,7 @@ def main(argv: list[str] | None = None) -> None:
         f"  [bold green]完成[/bold green] — 輸出: [cyan]{result.input.output_path}[/cyan]"
         f"  ({len(result.articles)} 篇文章)",
     )
+
 
 
 if __name__ == "__main__":

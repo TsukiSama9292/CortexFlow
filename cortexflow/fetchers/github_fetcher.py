@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from loguru import logger
 
 from cortexflow.config.settings import settings
 from cortexflow.core.errors import FetchError
@@ -25,15 +26,9 @@ class GitHubFetcher(BaseFetcher):
     TRENDING_URL = "https://github.com/trending"
 
     async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
-        """根據主題從特定渠道採集資料。.
+        """根據主題從特定渠道採集資料。."""
+        logger.debug("從 GitHub Trending 搜尋主題: {topic}", topic=topic)
 
-        Args:
-            topic: 研究主題。
-            max_results: 最大結果數。
-
-        Returns:
-            Article 列表。
-        """
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -63,9 +58,12 @@ class GitHubFetcher(BaseFetcher):
                 resp.raise_for_status()
                 html = resp.text
         except Exception as exc:
+            logger.error("GitHub Trending 頁面請求失敗: {error}", error=exc)
             raise FetchError("github", f"Trending 頁面請求失敗: {exc}", cause=exc) from exc
 
-        return self._parse_trending(html, topic, max_results)
+        articles = self._parse_trending(html, topic, max_results)
+        logger.info("GitHub Trending 採集成功: {count} 篇文章", count=len(articles))
+        return articles
 
     # ─────────────────────────────────────────────
     # 內部方法

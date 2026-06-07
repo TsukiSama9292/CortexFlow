@@ -14,9 +14,11 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from loguru import logger
 from rich.console import Console
 
 from cortexflow.config.settings import settings
+from cortexflow.core.db import Database
 from cortexflow.core.schema import (
     Article,
     ArticleAnalysis,
@@ -83,6 +85,7 @@ class Pipeline:
             "calls": 0,
         }
         self.report_content: ReportContent | None = None
+        self.db = Database()
 
     # ────────────────────────────
     # 公開介面
@@ -91,6 +94,7 @@ class Pipeline:
     async def run(self) -> PipelineOutput:
         """執行完整管道，回傳結構化結果。."""
         console = Console()
+        logger.info("Pipeline 開始執行 - 主題: {topic}", topic=self.inp.topic)
 
         self._print_pipeline_diagram(console)
 
@@ -127,7 +131,16 @@ class Pipeline:
         await self._run_stage("report", self._report, console)
 
         self._print_summary(console)
-        return self._build_output()
+        output = self._build_output()
+
+        # 儲存到資料庫
+        try:
+            exec_id = self.db.save_execution(output, demo=self.demo)
+            logger.debug("執行記錄已儲存 (ID: {id})", id=exec_id)
+        except Exception as e:
+            logger.warning("無法儲存執行記錄: {error}", error=e)
+
+        return output
 
     # ────────────────────────────
     # Stage 執行包裝器
@@ -380,7 +393,7 @@ class Pipeline:
         for r in self.stage_results:
             stats[r.stage_name] = {
                 "success": r.success,
-                "duration_seconds": r.duration,
+                "duration": r.duration,
                 "items_count": r.items_count,
                 "error": r.error,
             }
