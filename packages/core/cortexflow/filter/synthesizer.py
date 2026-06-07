@@ -122,7 +122,7 @@ class Synthesizer:
         text = self._format_analyses(analyses)
 
         result = await self._invoke_chain(chain, {"topic": self.topic, "text": text})  # pyright: ignore[reportUnknownArgumentType]
-        return cast(PartialAnalysis, result) if result else None
+        return cast("PartialAnalysis", result) if result else None
 
     async def _reduce_partials(self, partials: list[PartialAnalysis]) -> ReportContent | None:
         """彙整多個中間分析結果為最終 ReportContent。."""
@@ -221,7 +221,7 @@ class Synthesizer:
             raw = cast("AIMessage", res["raw"])
             parsed = res["parsed"]
 
-            usage = cast(dict[str, Any], raw.usage_metadata or {})
+            usage = cast("dict[str, Any]", raw.usage_metadata or {})
             in_tokens = int(usage.get("input_tokens", 0))
             out_tokens = int(usage.get("output_tokens", 0))
             self.total_tokens += in_tokens + out_tokens
