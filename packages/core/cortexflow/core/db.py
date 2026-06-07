@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from cortexflow.config.settings import settings
-from cortexflow.core.models import Execution
+from cortexflow.core.models import Execution, Task
 
 if TYPE_CHECKING:
     from cortexflow.core.schema import PipelineOutput
@@ -125,3 +125,72 @@ class Database:
     async def close(self) -> None:
         """關閉資料庫引擎。"""
         await self.engine.dispose()
+
+    # ────────────────────────────
+    # 任務佇列 (DB-as-a-Queue)
+    # ────────────────────────────
+
+    async def enqueue_task(self, topic: str, input_data: dict[str, Any]) -> int:
+        """將新任務加入佇列。"""
+        async with self.SessionLocal() as session:
+            task = Task(
+                topic=topic,
+                status="pending",
+                input_data=input_data,
+                created_at=datetime.now(UTC),
+            )
+            session.add(task)
+            await session.commit()
+            await session.refresh(task)
+            return task.id
+
+    async def get_next_task(self, worker_id: str) -> dict[str, Any] | None:
+        """選取下一個待處理任務 (原子操作)。"""
+        async with self.SessionLocal() as session:
+            # 使用 FOR UPDATE SKIP LOCKED 確保併發安全
+            stmt = (
+                select(Task)
+                .where(Task.status == "pending")
+                .order_by(Task.created_at.asc())
+                .limit(1)
+                .with_for_update(skip_locked=True)
+            )
+            result = await session.execute(stmt)
+            task = result.scalar_one_or_none()
+
+            if not task:
+                return None
+
+            # 立即標記為執行中
+            task.status = "running"
+            task.worker_id = worker_id
+            task.started_at = datetime.now(UTC)
+            await session.commit()
+
+            return {
+                "id": task.id,
+                "topic": task.topic,
+                "input_data": task.input_data,
+            }
+
+    async def update_task(
+        self,
+        task_id: int,
+        status: str,
+        result_data: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """更新任務狀態與結果。"""
+        async with self.SessionLocal() as session:
+            values: dict[str, Any] = {"status": status}
+            if status in ["completed", "failed"]:
+                values["completed_at"] = datetime.now(UTC)
+            if result_data:
+                values["result_data"] = result_data
+            if error_message:
+                values["error_message"] = error_message
+
+            stmt = update(Task).where(Task.id == task_id).values(**values)
+            await session.execute(stmt)
+            await session.commit()
+

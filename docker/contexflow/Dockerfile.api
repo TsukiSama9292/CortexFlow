@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.11-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -6,23 +6,19 @@ ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy
 
 WORKDIR /app
+RUN apt-get update && apt-get install -y curl procps && rm -rf /var/lib/apt/lists/*
 RUN pip install uv
 
+# 複製所有代碼
 COPY packages/core ./packages/core
 COPY apps/api ./apps/api
-COPY pyproject.toml .
-COPY uv.lock .
 
-RUN uv sync --frozen --no-dev --package cortexflow-api
+# 安裝
+WORKDIR /app/apps/api
+RUN uv sync --no-dev
 
-FROM python:3.11-slim-bookworm
-
-WORKDIR /app
-COPY --from=builder /app/.venv /app/.venv
-COPY apps/api /app/apps/api
-COPY packages/core /app/packages/core
-
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/apps/api/.venv/bin:$PATH"
 EXPOSE 8000
 
-CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 直接使用 uvicorn 指向模組
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contexflow.fullname" . }}-api
+  labels:
+    {{- include "contexflow.labels" . | nindent 4 }}
+    component: api
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "contexflow.selectorLabels" . | nindent 6 }}
+      component: api
+  template:
+    metadata:
+      labels:
+        {{- include "contexflow.selectorLabels" . | nindent 8 }}
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://{{ .Values.database.auth.username }}:{{ .Values.database.auth.password }}@{{ include "contexflow.fullname" . }}-db:5432/{{ .Values.database.auth.database }}"
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contexflow.fullname" . }}-api
+  labels:
+    {{- include "contexflow.labels" . | nindent 4 }}
+    component: api
+spec:
+  type: {{ .Values.api.service.type }}
+  ports:
+    - port: {{ .Values.api.service.port }}
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "contexflow.selectorLabels" . | nindent 4 }}
+    component: api

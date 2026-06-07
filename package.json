@@ -12,7 +12,9 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "docker:build": "docker compose -f docker/contexflow/docker-compose.yml build --no-cache",
+    "docker:push": "docker compose -f docker/contexflow/docker-compose.yml push"
   },
   "devDependencies": {
     "turbo": "latest"

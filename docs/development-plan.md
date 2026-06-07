@@ -90,7 +90,7 @@
 
 ---
 
-## 階段三：MMP（最小可銷售產品）— 下一階段
+## 階段三：MMP（最小可銷售產品）— 當前階段
 
 ### 核心目標：商業化部屬與工程化開發環境
 
@@ -111,9 +111,9 @@
 - [x] **Helm Chart 雲端發佈**：初始化 K8s 企業級集群部署。
 
 #### 3.3 商業數據基石 (ORM & Migration)
-- [ ] **Alembic Migration**：建立嚴謹的資料庫遷移版本控制。
-- [ ] **SQLAlchemy ORM 遷移**：從 SQLite 升級至企業級 PostgreSQL (已準備好 pgvector 環境)。
-- [ ] **PostgreSQL 事務性任務佇列 (DB-as-a-Queue)**：
+- [x] **Alembic Migration**：建立嚴謹的資料庫遷移版本控制。
+- [x] **SQLAlchemy ORM 遷移**：從 SQLite 升級至企業級 PostgreSQL (已準備好 pgvector 環境)。
+- [x] **PostgreSQL 事務性任務佇列 (DB-as-a-Queue)**：
     - 利用 `FOR UPDATE SKIP LOCKED` 實作高效任務分發。
 
 #### 3.4 商業化與通知整合 (Marketability)
@@ -123,7 +123,7 @@
 - [ ] **進階去重演算法**：導入 LSH (MinHash) 應對微調重複內容。
 
 #### 3.5 前端管理後台 (`apps/web`)
-- [/] **Next.js 官方網站**：已完成專案初始化與品質規範配置，待開發 Dashboard 功能。
+- [/] **Next.js 官方網站**：已完成專案初始化與品質規範配置，正在開發 Dashboard 與任務監控功能。
 
 ---
 

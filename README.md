@@ -1,126 +1,89 @@
 # CortexFlow
 
-**情報 ETL Pipeline — 從社群雜訊到結構化情報的固定管道式系統**
+**情報 ETL Pipeline — 從社群雜訊到結構化情報的 Monorepo 工程化系統**
 
-CortexFlow 是一個基於 Python 非同步架構開發的**固定管道式（Fixed Pipeline）情報過濾與自動化彙整系統**。與動態規劃型研究代理不同，CortexFlow 將處理流程定義為一組可預測、可重現的固定階段（Stage），具備強大的錯誤隔離、重試機制與執行記錄持久化功能。
-
----
-
-## 核心定位：堅韌的情報 ETL
-
-*   **固定管道**：Fetch → Normalize → Extract → Analyze → Report，流程清晰可除錯。
-*   **多源採集**：支援 Reddit, GitHub, Hacker News, Lobste.rs 等多元渠道。
-*   **Map-Reduce 分析**：併發執行 LLM 文章分析，最後單次彙總合成深度報告。
-*   **高可觀測性**：整合結構化日誌 (Loguru) 與 SQLite 執行歷史追蹤。
-*   **生產級韌性**：實作指數退避重試、全階段超時保護與**中斷續傳 (--resume)**。
+CortexFlow 是一個基於 Turborepo 管理的工程化情報系統。它採用 Control/Data Plane 分離架構，將複雜的情報處理流程（Fetch → Normalize → Extract → Analyze → Report）封裝為可擴展的微服務群，並透過 LLM 進行 Map-Reduce 模式的情報合成。
 
 ---
 
-## 系統架構
+## 🏗️ 系統架構 (Monorepo)
 
-```
-[使用者輸入] → [cortexflow.toml]
-        │
-        ▼
-┌─────────────────────────────────────────────┐
-│ Stage 1: 資料採集層 (Fetch Layer)            │
-│  ├─ Reddit, GitHub Trending                 │
-│  ├─ Hacker News, Lobste.rs                  │
-│  └─ [擴充點] 插件化 FetcherRegistry          │
-└───────────────────┬─────────────────────────┘
-                    ▼
-┌─────────────────────────────────────────────┐
-│ Stage 2: 標準化層 (Normalize Layer)          │
-│  └─ URL 去重 + 內容指紋 (Fingerprint) 去重   │
-└───────────────────┬─────────────────────────┘
-                    ▼
-┌─────────────────────────────────────────────┐
-│ Stage 3: 內容提取層 (Extract Layer)          │
-│  └─ trafilatura + BeautifulSoup 備援         │
-└───────────────────┬─────────────────────────┘
-                    ▼
-┌─────────────────────────────────────────────┐
-│ Stage 4: LLM 分析層 (Analyze Layer)         │
-│  ├─ Map: 併發評分、摘要、深度分析            │
-│  ├─ Reduce: 全局觀點合成與交叉比對           │
-│  └─ Fallback: 規則式降級分析器               │
-└───────────────────┬─────────────────────────┘
-                    ▼
-┌─────────────────────────────────────────────┐
-│ Stage 5: 彙整輸出層 (Report Layer)          │
-│  ├─ Markdown (豐富模式/列表模式)             │
-│  └─ JSON (完整結構化資料)                    │
-└───────────────────┬─────────────────────────┘
-                    ▼
-[SQLite 執行歷史] ── [輸出報告報告]
-```
+本專案採用 **Turborepo** 管理，結構如下：
+
+- **`apps/`** (應用程式層)
+    - `api/`: Control Plane，負責任務調度與 API 提供。
+    - `worker/`: Data Plane，執行實際的 ETL Pipeline 任務。
+    - `web/`: Next.js 前端管理後台。
+    - `cli/`: 互動式命令列工具。
+- **`packages/`** (共享套件層)
+    - `core/`: 核心邏輯、資料模型 (Pydantic)、資料庫 (SQLAlchemy/Alembic) 與 Pipeline 引擎。
+- **`docker/`**: 包含開發與生產環境的 Docker 配置。
+- **`helm/`**: K8s 生產環境部署 Chart。
 
 ---
 
-## CLI 使用方式
+## 🚀 快速上手 (開發環境)
 
+本專案使用 `npm` 作為 Monorepo 管理員，並透過 `docker compose` 啟動基礎設施。
+
+### 1. 環境初始化
+
+啟動必要的開發環境基礎設施（PostgreSQL + Traefik）：
 ```bash
-# 基本用法
-uv run cortexflow --topic "Rust 併發編程"
-
-# 指定多個來源並進入詳細模式
-uv run cortexflow --topic "AI Agent" --sources github hackernews -v
-
-# 從失敗點續傳執行
-uv run cortexflow --resume 42
-
-# 查看歷史記錄列表
-uv run cortexflow --history
-
-# 重新執行歷史任務
-uv run cortexflow --replay 1
+npm run init
 ```
 
-### 參數說明
+### 2. 啟動開發模式
+啟動所有應用程式的開發伺服器：
+```bash
+npm run dev
+```
 
-| 參數 | 預設值 | 說明 |
-|------|--------|------|
-| `--topic` | (必要) | 研究主題關鍵字 |
-| `--sources` | reddit github | 來源渠道 (reddit, github, hackernews, lobsters) |
-| `--output-format`| markdown | 輸出格式 (markdown, json) |
-| `--threshold` | 5.0 | LLM 相關性門檻 (0-10) |
-| `--demo` | - | Demo 模式：不需 API Key，使用模擬資料 |
-| `--verbose`, `-v` | - | 顯示詳細偵錯日誌 |
-| `--history` | - | 以表格列出 SQLite 中的執行紀錄 |
-| `--resume <id>` | - | 從指定 ID 的失敗點繼續執行 |
-| `--replay <id>` | - | 以相同設定重新執行歷史任務 |
-
----
-
-## 專案結構
-
-*   `cortexflow/core/`: 核心協調器 (`pipeline.py`)、資料庫 (`db.py`)、日誌 (`logger.py`) 與資料模型。
-*   `cortexflow/fetchers/`: 各類資料來源採集器與註冊中心。
-*   `cortexflow/config/`: 設定管理與 `cortexflow.toml` 載入邏輯。
-*   `cortexflow/filter/`: LLM 分析、報告合成與降級分析器。
-*   `tests/`: 包含 80+ 個測項的完整測試套件。
+### 3. 常用開發指令
+Turborepo 會自動處理任務相依性與快取：
+- **測試**：`npm test`
+- **檢查**：`npm run lint`
+- **建置**：`npm run build`
+- **型態檢查**：`npm run type-check`
 
 ---
 
-## 開發路線圖 (Roadmap)
+## 🐳 Docker 與容器化
 
-### Phase 1: PoC & Prototype ✅
-- ✅ 5 階段 Pipeline 核心實作
-- ✅ Reddit/GitHub Trending 採集
-- ✅ Rich CLI 視覺化介面
+### 本地整合測試 (Full Stack)
+啟動包含 API、Worker、Web 與 DB 的完整環境：
+```bash
+docker compose -f docker/contexflow/docker-compose.yml up -d
+```
+存取路徑：
+- Web UI: [http://localhost](http://localhost)
+- API Docs: [http://api.localhost/docs](http://api.localhost/docs)
 
-### Phase 2: MVP ✅ (目前版本)
-- ✅ **可觀測性**: Loguru 結構化日誌 + SQLite 持久化
-- ✅ **新來源**: Hacker News 與 Lobste.rs
-- ✅ **韌性**: 指數退避重試、Stage 超時、中斷續傳
-- ✅ **品質**: 100% Pyright Strict、Ruff、80+ Pytest 測項、CI/CD
+### 建置與推送鏡像
+```bash
+npm run docker:build
+npm run docker:push
+```
 
-### Phase 3: MMP (進行中)
-- [ ] **架構工程化**: Turborepo, Control/Data Plane 分離
-- [ ] **部屬自動化**: Traefik API Gateway, Docker Multi-stage, Helm Charts
-- [ ] **商業數據**: SQLAlchemy ORM, Alembic Migration, PostgreSQL Task Queue
-- [ ] **通知整合**: Slack/Discord/Telegram Webhooks
-- [ ] **前端門戶**: Next.js 管理後台與視覺化儀表板
+---
+
+## ☸️ Kubernetes 部署 (Helm)
+
+我們提供生產級的 Helm Chart 部署方案：
+```bash
+# 安裝或更新
+helm upgrade --install contexflow ./helm/contexflow --create-namespace --namespace cortexflow
+```
+詳細部署資訊請參考 [部署指南](docs/deployment.md)。
+
+---
+
+## 📜 核心開發方法
+
+1.  **非同步優先**：核心邏輯使用 `asyncio` 以確保 I/O 效率。
+2.  **型態安全**：全面使用 Pydantic v2 與 Pyright 嚴格模式。
+3.  **任務隔離**：API (Control Plane) 與 Worker (Data Plane) 透過資料庫任務隊列通訊。
+4.  **快取加速**：利用 Turborepo 的遠端快取機制優化 CI/CD 流程。
 
 ---
 

@@ -43,6 +43,7 @@ cp .env.example .env
 - **程式碼檢查**: `ruff check .`
 - **程式碼格式化**: `ruff format .`
 - **型態檢查**: `pyright`
+- **Helm 部署**: 請參考 `docs/deployment.md`
 
 ## 開發慣例
 

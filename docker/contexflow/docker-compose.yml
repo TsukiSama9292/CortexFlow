@@ -6,40 +6,66 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cortexflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
       context: ../../
       dockerfile: docker/contexflow/Dockerfile.api
+    image: tsukisama9292/cortexflow-api:latest
     environment:
-      DATABASE_URL: postgresql://user:password@db:5432/cortexflow
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/cortexflow
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     labels:
       - "traefik.http.routers.api.rule=Host(`api.localhost`)"
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   worker:
     build:
       context: ../../
       dockerfile: docker/contexflow/Dockerfile.worker
+    image: tsukisama9292/cortexflow-worker:latest
     environment:
-      DATABASE_URL: postgresql://user:password@db:5432/cortexflow
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/cortexflow
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep python || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   web:
     build:
       context: ../../
       dockerfile: docker/contexflow/Dockerfile.web
+    image: tsukisama9292/cortexflow-web:latest
     labels:
       - "traefik.http.routers.web.rule=Host(`localhost`)"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   traefik:
     image: traefik:v3.7.4

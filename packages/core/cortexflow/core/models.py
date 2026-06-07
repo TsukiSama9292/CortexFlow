@@ -31,3 +31,22 @@ class Execution(Base):
     total_tokens: Mapped[int] = mapped_column(Integer, default=0)
     demo: Mapped[bool] = mapped_column(Integer, default=0)  # SQLite compatibility, will be bool in Postgres
     last_completed_stage: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class Task(Base):
+    """異步任務模型。"""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    topic: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="pending")  # pending, running, completed, failed
+    input_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    result_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    worker_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    retries: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+

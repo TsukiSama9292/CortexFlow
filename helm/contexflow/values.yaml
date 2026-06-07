@@ -1,0 +1,45 @@
+# Default values for contexflow.
+api:
+  replicaCount: 1
+  image:
+    repository: tsukisama9292/cortexflow-api
+    pullPolicy: Always
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8000
+
+worker:
+  replicaCount: 1
+  image:
+    repository: tsukisama9292/cortexflow-worker
+    pullPolicy: Always
+    tag: "latest"
+
+web:
+  replicaCount: 1
+  image:
+    repository: tsukisama9292/cortexflow-web
+    pullPolicy: Always
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 3000
+
+database:
+  image:
+    repository: pgvector/pgvector
+    tag: 0.8.2-pg18-trixie
+    pullPolicy: IfNotPresent
+  auth:
+    database: cortexflow
+    username: user
+    password: password
+  service:
+    port: 5432
+
+traefik:
+  enabled: true
+  image:
+    repository: traefik
+    tag: v3.7.4

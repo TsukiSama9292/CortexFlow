@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contexflow.fullname" . }}-worker
+  labels:
+    {{- include "contexflow.labels" . | nindent 4 }}
+    component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "contexflow.selectorLabels" . | nindent 6 }}
+      component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "contexflow.selectorLabels" . | nindent 8 }}
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://{{ .Values.database.auth.username }}:{{ .Values.database.auth.password }}@{{ include "contexflow.fullname" . }}-db:5432/{{ .Values.database.auth.database }}"
+          livenessProbe:
+            exec:
+              command:
+                - pgrep
+                - python
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - pgrep
+                - python
+            initialDelaySeconds: 5
+            periodSeconds: 10
