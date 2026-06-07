@@ -62,8 +62,19 @@ class RedditFetcher(BaseFetcher):
     BASE_URL = "https://www.reddit.com"
     OLD_REDDIT_URL = "https://old.reddit.com"
 
-    async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
+    @property
+    def name(self) -> str:
+        """傳回採集器名稱。."""
+        return "reddit"
+
+    async def fetch(
+        self, topic: str, max_results: int = 20, *, demo: bool = False
+    ) -> list[Article]:
         """從 Reddit 採集文章。."""
+        if demo:
+            logger.debug("Reddit 使用 Demo 模式產出模擬資料")
+            return self._fetch_demo(topic, max_results)
+
         logger.debug("從 Reddit 搜尋主題: {topic}", topic=topic)
         # 嘗試主要端點
         try:

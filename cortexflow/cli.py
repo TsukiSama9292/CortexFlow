@@ -34,7 +34,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--sources",
         nargs="+",
-        choices=["reddit", "github"],
+        choices=["reddit", "github", "hackernews", "lobsters"],
         default=None,
         help="來源渠道（預設: reddit github）",
     )
@@ -243,7 +243,10 @@ def main(argv: list[str] | None = None) -> None:
     else:
         _check_environment(console)
 
-    sources = cast("list[Literal['reddit', 'github']]", args.sources or ["reddit", "github"])
+    sources = cast(
+        'list[Literal["reddit", "github", "hackernews", "lobsters"]]',
+        args.sources or ["reddit", "github"],
+    )
 
     pipeline_input = PipelineInput(
         topic=args.topic,

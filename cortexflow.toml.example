@@ -1,0 +1,17 @@
+[pipeline]
+sources = ["reddit", "github", "hackernews"]
+max_results_per_source = 20
+relevance_threshold = 5.0
+output_format = "markdown"
+
+[reddit]
+enabled = true
+
+[github]
+enabled = true
+
+[hackernews]
+enabled = true
+
+[lobsters]
+enabled = false

@@ -13,7 +13,7 @@ class Article(BaseModel):
 
     # ── 識別 ──
     id: str = Field(description="全域唯一 ID（由 source + source_id 組成）")
-    source: Literal["reddit", "github"] = Field(description="來源渠道")
+    source: Literal["reddit", "github", "hackernews", "lobsters"] = Field(description="來源渠道")
     source_id: str = Field(description="在原始渠道中的 ID")
 
     # ── 內容 ──
@@ -77,7 +77,9 @@ class PipelineInput(BaseModel):
     """管道執行參數。."""
 
     topic: str = Field(description="研究主題")
-    sources: list[Literal["reddit", "github"]] = Field(default=["reddit", "github"])
+    sources: list[Literal["reddit", "github", "hackernews", "lobsters"]] = Field(
+        default=["reddit", "github"],
+    )
     max_results_per_source: int = Field(default=20, ge=1, le=100)
     relevance_threshold: float = Field(default=5.0, ge=0.0, le=10.0)
     output_format: Literal["markdown", "json"] = Field(default="markdown")

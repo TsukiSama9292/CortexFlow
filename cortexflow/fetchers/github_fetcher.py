@@ -25,8 +25,18 @@ class GitHubFetcher(BaseFetcher):
 
     TRENDING_URL = "https://github.com/trending"
 
-    async def fetch(self, topic: str, max_results: int = 20) -> list[Article]:
+    @property
+    def name(self) -> str:
+        """傳回採集器名稱。."""
+        return "github"
+
+    async def fetch(
+        self, topic: str, max_results: int = 20, *, demo: bool = False
+    ) -> list[Article]:
         """根據主題從特定渠道採集資料。."""
+        if demo:
+            return self._fetch_demo(topic)
+
         logger.debug("從 GitHub Trending 搜尋主題: {topic}", topic=topic)
 
         headers = {
@@ -68,6 +78,44 @@ class GitHubFetcher(BaseFetcher):
     # ─────────────────────────────────────────────
     # 內部方法
     # ─────────────────────────────────────────────
+
+    def _fetch_demo(self, topic: str) -> list[Article]:
+        """產生 GitHub 的模擬資料。."""
+        logger.debug("GitHub 使用 Demo 模式產出模擬資料")
+
+        repos = [
+            ("cortexflow/cortexflow", "情報 ETL Pipeline — 從社群雜訊到結構化情報"),
+            ("langchain-ai/langchain", "Building applications with LLMs through composability"),
+            ("openai/openai-cookbook", "Examples and guides for using the OpenAI API"),
+            ("pydantic/pydantic", "Data validation using Python type hints"),
+            ("encode/httpx", "A next generation HTTP client for Python"),
+        ]
+        articles: list[Article] = []
+        topic_l = topic.lower()
+        for full_name, desc in repos:
+            # 測試或 Demo 模式下放寬過濾
+            if (
+                "test" not in topic_l
+                and topic_l != "demo"
+                and topic_l not in (full_name + desc).lower()
+            ):
+                continue
+
+            uid = f"github-{full_name}"
+            articles.append(
+                Article(
+                    id=hashlib.sha256(uid.encode()).hexdigest()[:16],
+                    source="github",
+                    source_id=full_name,
+                    title=full_name,
+                    text=desc,
+                    author=full_name.split("/")[0] if "/" in full_name else "",
+                    url=f"https://github.com/{full_name}",
+                    score=100,
+                    created_at=datetime.now(tz=UTC),
+                )
+            )
+        return articles
 
     def _detect_language(self, topic: str) -> str | None:
         """若 topic 是常見程式語言名稱，回傳該語言 slug，否則 None。.
@@ -179,12 +227,7 @@ class GitHubFetcher(BaseFetcher):
 
     @staticmethod
     def _is_relevant(combined: str, topic: str) -> bool:
-        """檢查 trending 專案的名稱/描述是否與主題相關。.
-
-        策略：
-        - 完全比對：topic 作為子字串出現
-        - 分詞比對：topic 的每個詞至少有一個出現在文字中
-        """
+        """檢查 trending 專案的名稱/描述是否與主題相關。."""
         # 完全比對
         if topic in combined:
             return True

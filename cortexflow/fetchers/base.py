@@ -12,6 +12,11 @@ if TYPE_CHECKING:
 class BaseFetcher(ABC):
     """資料採集器抽象基底。."""
 
+    @property
     @abstractmethod
-    async def fetch(self, topic: str, max_results: int) -> list[Article]:
+    def name(self) -> str:
+        """傳回此採集器的名稱（例如 'reddit', 'github'）。."""
+
+    @abstractmethod
+    async def fetch(self, topic: str, max_results: int, *, demo: bool = False) -> list[Article]:
         """根據主題從特定渠道採集資料。."""
