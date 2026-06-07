@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from cortexflow.core.pipeline import Pipeline
 
 app = FastAPI(title="CortexFlow API")
 

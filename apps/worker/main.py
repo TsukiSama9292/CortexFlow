@@ -1,5 +1,4 @@
 import asyncio
-from cortexflow.core.pipeline import Pipeline
 
 async def main():
     print("CortexFlow Worker starting...")
