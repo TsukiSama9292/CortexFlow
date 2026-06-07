@@ -1,19 +1,13 @@
 {
-	"name": "@cortexflow/cli",
-	"version": "0.1.0",
-	"type": "module",
-	"bin": {
-		"cortexflow": "./dist/index.js"
-	},
-	"scripts": {
-		"dev": "tsc -w",
-		"build": "tsc",
-		"lint": "biome check .",
-		"test": "vitest run"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "latest",
-		"typescript": "latest",
-		"vitest": "latest"
-	}
+  "name": "@cortexflow/cli",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run cortexflow --topic 'AI Agents' --demo",
+    "build": "echo 'No build step required for Python CLI'",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "type-check": "uv run pyright",
+    "test": "uv run pytest"
+  }
 }

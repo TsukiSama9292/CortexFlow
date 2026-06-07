@@ -6,16 +6,15 @@ import argparse
 import asyncio
 import sys
 from importlib import metadata
-from typing import Literal, cast
-
-from rich.console import Console
-from rich.prompt import Confirm, Prompt
+from typing import Any, Literal, cast
 
 from cortexflow.config.loader import get_pipeline_defaults, load_config
 from cortexflow.core.db import Database
 from cortexflow.core.logger import setup_logger
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import PipelineInput
+from rich.console import Console
+from rich.prompt import Confirm, Prompt
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -29,9 +28,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="情報 ETL Pipeline — 從社群媒體與開發平台採集結構化情報",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "範例:\\r"
-            '  cortexflow --topic "AI Agent" --sources reddit github\\r'
-            "  cortexflow --topic Rust --sources github --output-format json\\r"
+            "範例:\r"
+            '  cortexflow --topic "AI Agent" --sources reddit github\r'
+            "  cortexflow --topic Rust --sources github --output-format json\r"
             "  cortexflow --topic demo --demo"
         ),
     )
@@ -104,7 +103,7 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
 
     topic = Prompt.ask("  研究主題", default="AI Agent")
 
-    default_sources_list = defaults.get("sources", ["reddit", "github"])
+    default_sources_list = cast("list[str]", defaults.get("sources", ["reddit", "github"]))
     default_sources = ", ".join(default_sources_list)
     sources_input = Prompt.ask("  來源渠道（逗號分隔）", default=default_sources)
     sources = [s.strip() for s in sources_input.split(",") if s.strip()]
@@ -125,6 +124,11 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
         max_results=defaults.get("max_results", 20),
         threshold=defaults.get("threshold", 5.0),
         demo=use_demo,
+        verbose=False,
+        log_file=None,
+        history=False,
+        replay=None,
+        resume=None,
     )
     return cast("argparse.Namespace", ns)
 
@@ -165,7 +169,7 @@ def _check_environment(console: Console) -> bool:
     console.print(f"  [green]✔ Python[/green] — {py_ver}")
 
     try:
-        ver = metadata.version("cortexflow")
+        ver = metadata.version("cortexflow-core")
         console.print(f"  [green]✔ CortexFlow[/green] — v{ver}")
     except metadata.PackageNotFoundError:
         pass
@@ -173,10 +177,10 @@ def _check_environment(console: Console) -> bool:
     return ok
 
 
-def _show_history(console: Console) -> None:
+async def _show_history(console: Console) -> None:
     """顯示執行歷史記錄表格。."""
     db = Database()
-    history = db.get_history()
+    history = await db.get_history()
 
     if not history:
         console.print("  [yellow]目前無執行記錄。[/yellow]")
@@ -200,39 +204,39 @@ def _show_history(console: Console) -> None:
             h["topic"],
             h["timestamp"],
             status_str,
-            f"{h['duration_seconds']:.2f}",
+            f"{h['duration_seconds']:.2f}" if h["duration_seconds"] else "-",
             f"{h['total_tokens']:,}",
             h.get("last_completed_stage") or "-",
         )
 
     console.print(table)
+    await db.close()
 
 
 async def _replay_execution(execution_id: int, console: Console) -> None:
     """從歷史記錄重現特定執行。."""
     db = Database()
-    exec_data = db.get_execution(execution_id)
+    exec_data = await db.get_execution(execution_id)
 
     if not exec_data:
         console.print(f"  [red]❌ 找不到 ID 為 {execution_id} 的執行記錄[/red]")
         return
 
-    import json
-
-    input_data = json.loads(exec_data["input_json"])
+    input_data = cast("dict[str, Any]", exec_data["input_json"])
     console.print(f"  [bold]🔄 正在重現執行記錄 #{execution_id}[/bold]")
     console.print(f"  [dim]主題: {input_data['topic']}[/dim]\n")
 
     pipeline_input = PipelineInput(**input_data)
-    use_demo = bool(exec_data.get("demo", 0))
+    use_demo = bool(exec_data.get("demo", False))
     pipeline = Pipeline(pipeline_input, demo=use_demo)
     await pipeline.run()
+    await db.close()
 
 
 async def _resume_execution(execution_id: int, console: Console) -> None:
     """從歷史記錄續傳執行。."""
     db = Database()
-    exec_data = db.get_execution(execution_id)
+    exec_data = await db.get_execution(execution_id)
 
     if not exec_data:
         console.print(f"  [red]❌ 找不到 ID 為 {execution_id} 的執行記錄[/red]")
@@ -245,21 +249,20 @@ async def _resume_execution(execution_id: int, console: Console) -> None:
         await _replay_execution(execution_id, console)
         return
 
-    import json
-
-    input_data = json.loads(exec_data["input_json"])
+    input_data = cast("dict[str, Any]", exec_data["input_json"])
     last_stage = exec_data.get("last_completed_stage") or "None"
     console.print(f"  [bold]⏯️ 正在續傳執行記錄 #{execution_id}[/bold]")
     console.print(f"  [dim]主題: {input_data['topic']}, 上次完成: {last_stage}[/dim]\n")
 
     pipeline_input = PipelineInput(**input_data)
-    use_demo = bool(exec_data.get("demo", 0))
+    use_demo = bool(exec_data.get("demo", False))
     pipeline = Pipeline(pipeline_input, demo=use_demo, execution_id=execution_id)
     await pipeline.run()
+    await db.close()
 
 
-def main(argv: list[str] | None = None) -> None:
-    """CortexFlow 入口函式。."""
+async def async_main(argv: list[str] | None = None) -> None:
+    """CortexFlow 非同步入口函式。."""
     console = Console()
 
     show_help = "--help" in sys.argv or "-h" in sys.argv
@@ -277,15 +280,15 @@ def main(argv: list[str] | None = None) -> None:
 
     # 2. 處理特定指令
     if args.history:
-        _show_history(console)
+        await _show_history(console)
         return
 
     if args.replay:
-        asyncio.run(_replay_execution(args.replay, console))
+        await _replay_execution(args.replay, console)
         return
 
     if args.resume:
-        asyncio.run(_resume_execution(args.resume, console))
+        await _resume_execution(args.resume, console)
         return
 
     # 3. 執行 Pipeline
@@ -309,12 +312,17 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     pipeline = Pipeline(pipeline_input, demo=args.demo)
-    result = asyncio.run(pipeline.run())
+    result = await pipeline.run()
 
     console.print(
         f"  [bold green]完成[/bold green] — 輸出: [cyan]{result.input.output_path}[/cyan]"
         f"  ({len(result.articles)} 篇文章)",
     )
+
+
+def main(argv: list[str] | None = None) -> None:
+    """CortexFlow 入口函式。."""
+    asyncio.run(async_main(argv))
 
 
 if __name__ == "__main__":

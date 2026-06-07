@@ -1,0 +1,48 @@
+[project]
+name = "cortexflow-cli"
+version = "0.1.0"
+description = "CortexFlow CLI application"
+requires-python = ">=3.11"
+dependencies = [
+    "cortexflow-core",
+    "rich>=13.0",
+]
+
+[project.scripts]
+cortexflow = "cortexflow_cli.main:main"
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+packages = ["cortexflow_cli"]
+
+[tool.uv.sources]
+cortexflow-core = { path = "../../packages/core", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6.0",
+    "pyright>=1.1.300",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "ARG", "ANN", "D", "S", "BLE", "FBT", "A", "COM", "C4", "DTZ", "T20", "Q", "RET", "SLF", "TID", "TCH", "PT", "ERA", "RUF100"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["cortexflow_cli"]
+extraPaths = ["../../packages/core"]
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
