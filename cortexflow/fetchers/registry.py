@@ -16,6 +16,7 @@ class FetcherRegistry:
     """管理所有可用的 Fetcher 插件。."""
 
     def __init__(self) -> None:
+        """初始化註冊中心並自動發現插件。."""
         self._fetchers: dict[str, BaseFetcher] = {}
         self._discover_plugins()
 

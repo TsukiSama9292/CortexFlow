@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 from datetime import UTC, datetime
 
@@ -24,6 +25,7 @@ class HackerNewsFetcher(BaseFetcher):
 
     @property
     def name(self) -> str:
+        """傳回採集器名稱。."""
         return "hackernews"
 
     async def fetch(
@@ -61,11 +63,9 @@ class HackerNewsFetcher(BaseFetcher):
 
             created_at = None
             if created_at_str:
-                try:
+                with contextlib.suppress(ValueError):
                     # Algolia 回傳格式如 "2024-01-01T12:00:00Z"
                     created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                except ValueError:
-                    pass
 
             uid = f"hn-{hn_id}"
             articles.append(
@@ -97,9 +97,8 @@ class HackerNewsFetcher(BaseFetcher):
         articles: list[Article] = []
         topic_l = topic.lower()
         for title, hn_id in stories:
-            if "test" not in topic_l and topic_l != "demo":
-                if topic_l not in title.lower():
-                    continue
+            if "test" not in topic_l and topic_l != "demo" and topic_l not in title.lower():
+                continue
             uid = f"hn-{hn_id}"
             articles.append(
                 Article(

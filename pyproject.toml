@@ -75,8 +75,6 @@ select = [
     "RUF100", # unused-noqa
 ]
 ignore = [
-    "ANN101", # Missing type annotation for self
-    "ANN102", # Missing type annotation for cls
     "COM812", # Trailing comma missing (conflicts with formatter)
 ]
 

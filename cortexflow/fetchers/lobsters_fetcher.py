@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 from datetime import UTC, datetime
 
@@ -24,6 +25,7 @@ class LobstersFetcher(BaseFetcher):
 
     @property
     def name(self) -> str:
+        """傳回採集器名稱。."""
         return "lobsters"
 
     async def fetch(
@@ -65,10 +67,8 @@ class LobstersFetcher(BaseFetcher):
 
             created_at = None
             if created_at_str:
-                try:
+                with contextlib.suppress(ValueError):
                     created_at = datetime.fromisoformat(created_at_str)
-                except ValueError:
-                    pass
 
             uid = f"lobsters-{short_id}"
             articles.append(
@@ -102,9 +102,8 @@ class LobstersFetcher(BaseFetcher):
         articles: list[Article] = []
         topic_l = topic.lower()
         for title, short_id in items:
-            if "test" not in topic_l and topic_l != "demo":
-                if topic_l not in title.lower():
-                    continue
+            if "test" not in topic_l and topic_l != "demo" and topic_l not in title.lower():
+                continue
             uid = f"lobsters-{short_id}"
             articles.append(
                 Article(
