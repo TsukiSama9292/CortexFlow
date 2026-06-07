@@ -2,7 +2,10 @@
 	"name": "cortexflow-monorepo",
 	"private": true,
 	"packageManager": "npm@10.2.4",
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"init": "docker compose -f docker/contexflow/dev.yml up -d",
 		"dev": "npm run init && turbo run dev",
