@@ -10,10 +10,9 @@ import contextlib
 import hashlib
 from datetime import UTC, datetime
 
-import httpx
 from loguru import logger
 
-from cortexflow.config.settings import settings
+from cortexflow.core.http import get_async_client
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 
@@ -44,7 +43,7 @@ class HackerNewsFetcher(BaseFetcher):
         }
 
         try:
-            async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
+            async with get_async_client() as client:
                 resp = await client.get(self.SEARCH_API_URL, params=params)
                 resp.raise_for_status()
                 data = resp.json()

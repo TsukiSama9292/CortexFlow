@@ -4,12 +4,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from cortexflow.core.db import Database
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import PipelineInput
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from cortexflow.core.db import Database
 
 
 @pytest.mark.asyncio

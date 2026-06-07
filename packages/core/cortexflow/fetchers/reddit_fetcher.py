@@ -12,10 +12,9 @@ import hashlib
 import random
 from datetime import UTC, datetime, timedelta
 
-import httpx
 from loguru import logger
 
-from cortexflow.config.settings import settings
+from cortexflow.core.http import get_async_client
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 
@@ -105,16 +104,8 @@ class RedditFetcher(BaseFetcher):
             "sort": "relevance",
             "type": "link",
         }
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }
-
-        async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
-            resp = await client.get(url, params=params, headers=headers)
+        async with get_async_client() as client:
+            resp = await client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
 

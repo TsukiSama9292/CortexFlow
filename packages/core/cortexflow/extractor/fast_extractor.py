@@ -9,13 +9,12 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-import httpx
 import trafilatura
 from bs4 import BeautifulSoup
 from loguru import logger
 from rich.console import Console
 
-from cortexflow.config.settings import settings
+from cortexflow.core.http import get_async_client
 
 if TYPE_CHECKING:
     from cortexflow.core.schema import Article
@@ -90,19 +89,9 @@ class FastExtractor:
 
     async def _try_beautifulsoup(self, url: str) -> str | None:
         """BeautifulSoup 備援解析。."""
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }
         try:
-            async with httpx.AsyncClient(
-                timeout=settings.request_timeout,
-                follow_redirects=True,
-            ) as client:
-                resp = await client.get(url, headers=headers)
+            async with get_async_client() as client:
+                resp = await client.get(url)
                 resp.raise_for_status()
                 html = resp.text
 

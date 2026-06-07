@@ -10,10 +10,9 @@ import contextlib
 import hashlib
 from datetime import UTC, datetime
 
-import httpx
 from loguru import logger
 
-from cortexflow.config.settings import settings
+from cortexflow.core.http import get_async_client
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 
@@ -38,7 +37,7 @@ class LobstersFetcher(BaseFetcher):
         logger.debug("從 Lobsters 搜尋（依 hottest API 過濾主題: {topic}）", topic=topic)
 
         try:
-            async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
+            async with get_async_client() as client:
                 resp = await client.get(self.LATEST_URL)
                 resp.raise_for_status()
                 data = resp.json()

@@ -30,6 +30,7 @@ from cortexflow.core.schema import (
 from cortexflow.normalizer.normalizer import Normalizer
 from cortexflow.reporter.json_reporter import JSONReporter
 from cortexflow.reporter.markdown_reporter import MarkdownReporter
+from cortexflow.reporter.notifier import Notifier
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -158,13 +159,20 @@ class Pipeline:
         if not self._should_skip("report"):
             await self._run_stage("report", self._report, console)
 
+        # 發送通知
+        if self.report_content and settings.notification_urls:
+            notifier = Notifier()
+            await notifier.notify(self.report_content)
+
         self._print_summary(console)
         output = self._build_output()
 
         # 最終更新資料庫
         try:
             if self.execution_id:
-                await self.db.update_execution(self.execution_id, output, "success", last_stage="report")
+                await self.db.update_execution(
+                    self.execution_id, output, "success", last_stage="report"
+                )
             else:
                 self.execution_id = await self.db.save_execution(
                     output, demo=self.demo, last_stage="report"

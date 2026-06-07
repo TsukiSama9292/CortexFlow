@@ -1,4 +1,4 @@
-"""CortexFlow 資料庫模組 — 基於 SQLAlchemy ORM 與 PostgreSQL。"""
+"""CortexFlow 資料庫模組 — 基於 SQLAlchemy ORM 與 PostgreSQL。."""
 
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 
 
 class Database:
-    """SQLAlchemy 資料庫管理類，負責執行紀錄持久化。"""
+    """SQLAlchemy 資料庫管理類，負責執行紀錄持久化。."""
 
     def __init__(self, database_url: str | None = None) -> None:
-        """初始化異步引擎與 Session 工廠。"""
+        """初始化異步引擎與 Session 工廠。."""
         url = database_url or settings.database_url
         self.engine = create_async_engine(url, pool_pre_ping=True)
         self.SessionLocal = async_sessionmaker(
@@ -36,7 +36,7 @@ class Database:
         demo: bool = False,
         last_stage: str | None = None,
     ) -> int:
-        """儲存一次 Pipeline 執行結果。"""
+        """儲存一次 Pipeline 執行結果。."""
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
 
         async with self.SessionLocal() as session:
@@ -64,7 +64,7 @@ class Database:
         *,
         last_stage: str | None = None,
     ) -> None:
-        """更新現有的執行記錄。"""
+        """更新現有的執行記錄。."""
         duration = sum(s.get("duration", 0) for s in output.stage_stats.values())
 
         async with self.SessionLocal() as session:
@@ -83,7 +83,7 @@ class Database:
             await session.commit()
 
     async def get_history(self, limit: int = 10) -> list[dict[str, Any]]:
-        """取得最近的執行記錄。"""
+        """取得最近的執行記錄。."""
         async with self.SessionLocal() as session:
             stmt = select(Execution).order_by(Execution.timestamp.desc()).limit(limit)
             result = await session.execute(stmt)
@@ -102,7 +102,7 @@ class Database:
             ]
 
     async def get_execution(self, execution_id: int) -> dict[str, Any] | None:
-        """取得特定執行記錄的完整資料。"""
+        """取得特定執行記錄的完整資料。."""
         async with self.SessionLocal() as session:
             stmt = select(Execution).where(Execution.id == execution_id)
             result = await session.execute(stmt)
@@ -123,7 +123,7 @@ class Database:
             }
 
     async def close(self) -> None:
-        """關閉資料庫引擎。"""
+        """關閉資料庫引擎。."""
         await self.engine.dispose()
 
     # ────────────────────────────
@@ -131,7 +131,7 @@ class Database:
     # ────────────────────────────
 
     async def enqueue_task(self, topic: str, input_data: dict[str, Any]) -> int:
-        """將新任務加入佇列。"""
+        """將新任務加入佇列。."""
         async with self.SessionLocal() as session:
             task = Task(
                 topic=topic,
@@ -145,7 +145,7 @@ class Database:
             return task.id
 
     async def get_next_task(self, worker_id: str) -> dict[str, Any] | None:
-        """選取下一個待處理任務 (原子操作)。"""
+        """選取下一個待處理任務 (原子操作)。."""
         async with self.SessionLocal() as session:
             # 使用 FOR UPDATE SKIP LOCKED 確保併發安全
             stmt = (
@@ -180,7 +180,7 @@ class Database:
         result_data: dict[str, Any] | None = None,
         error_message: str | None = None,
     ) -> None:
-        """更新任務狀態與結果。"""
+        """更新任務狀態與結果。."""
         async with self.SessionLocal() as session:
             values: dict[str, Any] = {"status": status}
             if status in ["completed", "failed"]:

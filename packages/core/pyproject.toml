@@ -20,6 +20,9 @@ dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
     "psycopg2-binary>=2.9.12",
+    "apprise>=1.11.0",
+    "fake-useragent>=2.2.0",
+    "datasketch>=1.10.0",
 ]
 
 [tool.uv]

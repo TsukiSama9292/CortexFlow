@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # ─── GitHub ───
     github_token: str = ""
 
+    # ─── Notifications ───
+    notification_urls: str = ""  # Comma-separated Apprise URLs
+
+    # ─── Proxy ───
+    proxy_url: str = ""
+
     # ─── Database ───
     database_url: str = "postgresql+asyncpg://user:password@localhost:5433/cortexflow"
 

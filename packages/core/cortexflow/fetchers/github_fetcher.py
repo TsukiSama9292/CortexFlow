@@ -10,12 +10,12 @@ import hashlib
 import re
 from datetime import UTC, datetime
 
-import httpx
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from cortexflow.config.settings import settings
 from cortexflow.core.errors import FetchError
+from cortexflow.core.http import get_async_client
 from cortexflow.core.schema import Article
 from cortexflow.fetchers.base import BaseFetcher
 
@@ -39,14 +39,7 @@ class GitHubFetcher(BaseFetcher):
 
         logger.debug("從 GitHub Trending 搜尋主題: {topic}", topic=topic)
 
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html",
-        }
+        headers = {"Accept": "text/html"}
         if settings.github_token:
             headers["Authorization"] = f"Bearer {settings.github_token}"
 
@@ -60,11 +53,8 @@ class GitHubFetcher(BaseFetcher):
         trending_url += "?since=weekly"
 
         try:
-            async with httpx.AsyncClient(
-                timeout=settings.request_timeout,
-                follow_redirects=True,
-            ) as client:
-                resp = await client.get(trending_url, headers=headers)
+            async with get_async_client(headers=headers) as client:
+                resp = await client.get(trending_url)
                 resp.raise_for_status()
                 html = resp.text
         except Exception as exc:

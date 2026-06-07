@@ -28,17 +28,17 @@ async def db(postgres_container: PostgresContainer):
     """建立資料庫連線並初始化資料表。"""
     url = postgres_container.get_connection_url()
     database = Database(url)
-    
+
     # 手動建立資料表（測試用，不經 alembic）
     async with database.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
     yield database
-    
+
     # 清理資料表以確保測試隔離
     async with database.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await database.close()
 
 

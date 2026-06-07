@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
-from cortexflow.core.db import Database
 from cortexflow.core.pipeline import Pipeline
 from cortexflow.core.schema import Article, PipelineInput, PipelineOutput
+
+if TYPE_CHECKING:
+    from cortexflow.core.db import Database
 
 
 @pytest.mark.asyncio
