@@ -11,6 +11,7 @@ from typing import Literal, cast
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
+from cortexflow.config.loader import get_pipeline_defaults, load_config
 from cortexflow.core.db import Database
 from cortexflow.core.logger import setup_logger
 from cortexflow.core.pipeline import Pipeline
@@ -19,6 +20,10 @@ from cortexflow.core.schema import PipelineInput
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """解析命令列參數。."""
+    # 載入設定檔預設值
+    config = load_config()
+    defaults = get_pipeline_defaults(config)
+
     parser = argparse.ArgumentParser(
         prog="cortexflow",
         description="情報 ETL Pipeline — 從社群媒體與開發平台採集結構化情報",
@@ -71,6 +76,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--history", action="store_true", help="查看執行歷史記錄")
     parser.add_argument("--replay", type=int, help="從歷史記錄重現特定執行 (ID)")
 
+    # 設定從檔案載入的預設值
+    parser.set_defaults(**defaults)
+
     args = parser.parse_args(argv)
 
     if args.demo and not args.topic:
@@ -83,6 +91,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def _interactive_prompt(console: Console) -> argparse.Namespace:
     """互動式引導模式 — 逐步詢問使用者輸入。."""
+    # 載入設定檔預設值
+    config = load_config()
+    defaults = get_pipeline_defaults(config)
+
     console.print()
     console.rule("[bold]🖐️ 歡迎使用 CortexFlow — 情報 ETL Pipeline[/bold]")
     console.print()
@@ -90,7 +102,10 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
     console.print()
 
     topic = Prompt.ask("  研究主題", default="AI Agent")
-    sources_input = Prompt.ask("  來源渠道（逗號分隔）", default="reddit, github")
+
+    default_sources_list = defaults.get("sources", ["reddit", "github"])
+    default_sources = ", ".join(default_sources_list)
+    sources_input = Prompt.ask("  來源渠道（逗號分隔）", default=default_sources)
     sources = [s.strip() for s in sources_input.split(",") if s.strip()]
 
     use_demo = not Confirm.ask("  使用真實資料", default=True)
@@ -103,11 +118,11 @@ def _interactive_prompt(console: Console) -> argparse.Namespace:
 
     ns = SimpleNamespace(
         topic=topic,
-        sources=sources if sources else ["reddit", "github"],
-        output_format="markdown",
-        output="outputs/report.md",
-        max_results=20,
-        threshold=5.0,
+        sources=sources if sources else default_sources_list,
+        output_format=defaults.get("output_format", "markdown"),
+        output=defaults.get("output", "outputs/report.md"),
+        max_results=defaults.get("max_results", 20),
+        threshold=defaults.get("threshold", 5.0),
         demo=use_demo,
     )
     return cast("argparse.Namespace", ns)
